@@ -1,0 +1,53 @@
+{
+  "frames": {
+    "fluffy-1.png": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 125
+    },
+    "fluffy-2.png": {
+      "frame": {
+        "x": 128,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 125
+    },
+    "fluffy-3.png": {
+      "frame": {
+        "x": 0,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 125
+    },
+    "fluffy-4.png": {
+      "frame": {
+        "x": 128,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "duration": 125
+    }
+  },
+  "meta": {
+    "app": "sprite-ai.art",
+    "version": "1.0",
+    "image": "fluffy.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 256,
+      "h": 256
+    },
+    "scale": "1",
+    "fps": 8,
+    "frameCount": 4
+  }
+}

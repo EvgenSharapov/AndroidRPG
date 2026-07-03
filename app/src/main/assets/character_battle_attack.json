@@ -1,0 +1,71 @@
+{
+  "frames": {
+    "character_battle_attack-1.png": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 47,
+        "h": 47
+      },
+      "duration": 125
+    },
+    "character_battle_attack-2.png": {
+      "frame": {
+        "x": 47,
+        "y": 0,
+        "w": 47,
+        "h": 47
+      },
+      "duration": 125
+    },
+    "character_battle_attack-3.png": {
+      "frame": {
+        "x": 94,
+        "y": 0,
+        "w": 47,
+        "h": 47
+      },
+      "duration": 125
+    },
+    "character_battle_attack-4.png": {
+      "frame": {
+        "x": 0,
+        "y": 47,
+        "w": 47,
+        "h": 47
+      },
+      "duration": 125
+    },
+    "character_battle_attack-5.png": {
+      "frame": {
+        "x": 47,
+        "y": 47,
+        "w": 47,
+        "h": 47
+      },
+      "duration": 125
+    },
+    "character_battle_attack-6.png": {
+      "frame": {
+        "x": 94,
+        "y": 47,
+        "w": 47,
+        "h": 47
+      },
+      "duration": 125
+    }
+  },
+  "meta": {
+    "app": "sprite-ai.art",
+    "version": "1.0",
+    "image": "character_battle_attack.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 141,
+      "h": 94
+    },
+    "scale": "1",
+    "fps": 8,
+    "frameCount": 6
+  }
+}
