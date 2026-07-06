@@ -2,9 +2,10 @@ package com.example.myapplication
 
 import android.content.Context
 import android.graphics.*
+import android.os.Build
 import android.view.MotionEvent
-import android.view.SurfaceHolder
 import android.view.SurfaceView
+import androidx.annotation.RequiresApi
 import com.example.myapplication.manager.*
 import com.example.myapplication.model.*
 import com.example.myapplication.renderer.*
@@ -13,7 +14,6 @@ import com.example.myapplication.ui.StatsScreen
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.sin
 import kotlin.math.sqrt
 
 class GameView(context: Context) : SurfaceView(context), Runnable {
@@ -44,10 +44,12 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
     private var lastTouchX = 0f
     private var lastTouchY = 0f
 
+    private var bossOnMap = false
+
     private lateinit var spriteManager: SpriteManager
 
     // Для карты
-    private var currentSprite = "character"
+    private var currentSprite = "character_zombie"
     private var currentAnimation = "idle"
     private var currentFrameIndex = 0
     private var frameTimer = 0
@@ -60,22 +62,32 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
     private var isAttackingInBattle = false
     private var isLevelChecked = false
 
+    // ⭐ ЭФФЕКТ РЕСПАУНА И ПОЯВЛЕНИЯ БОССА
+    private var respawnEffectTimer = 0
+    private var respawnEffectX = 0f
+    private var respawnEffectY = 0f
+
     // Экран характеристик
     private lateinit var statsScreen: StatsScreen
 
     // Регенерация HP
     private var regenTimer = 0
-    private val REGEN_INTERVAL = 60  // 60 кадров ≈ 1 секунда (при 60 FPS)
-    private val REGEN_AMOUNT = 1f    // 1 HP за тик
+    private val REGEN_INTERVAL = 60
+    private val REGEN_AMOUNT = 1f
 
     private lateinit var inventoryScreen: InventoryScreen
     private val inventory = Inventory()
+
+    private lateinit var saveManager: SaveManager
 
     init {
         spriteManager = SpriteManager(context)
         GameRenderer.loadBackgrounds(context)
         statsScreen = StatsScreen()
-        inventoryScreen = InventoryScreen()
+        inventoryScreen = InventoryScreen(context)
+        saveManager = SaveManager(context)
+
+        loadGame()
     }
 
     // ========== ОСНОВНОЙ ЦИКЛ ==========
@@ -100,9 +112,7 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
                     checkLevelUp()
                 }
             }
-            GameState.MAP -> { /* Ничего не обновляем */ }
-            GameState.STATS -> { /* Ничего не обновляем */ }
-            GameState.INVENTORY -> { /* Ничего не обновляем */ }
+            GameState.MAP, GameState.STATS, GameState.INVENTORY -> { /* Ничего не обновляем */ }
         }
         if (messageTimer > 0) messageTimer--
     }
@@ -127,20 +137,49 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
         checkLocationTransition()
 
         val location = locationManager.getCurrentData()
-        location.mobs.removeAll { it.isDead && it.deathTimer > 30 }
 
+        // ⭐ РЕСПАУН МОБОВ (с логами)
+        var deadCount = 0
         for (mob in location.mobs) {
-            if (mob.isDead) mob.deathTimer++
+            if (mob.isDead) {
+                deadCount++
+                mob.deathTimer++
+                mob.respawnTimer++
+
+                // Лог для отладки (каждые 60 кадров)
+                if (mob.respawnTimer % 60 == 0) {
+                    println("💀 ${mob.getTypeName()} мёртв ${mob.respawnTimer}/900")
+                }
+
+                // Респаун через 15 секунд (900 кадров при 60 FPS)
+                if (mob.respawnTimer >= 900) {
+                    mob.respawn()
+                    println("🔄 РЕСПАУН: ${mob.getTypeName()} воскрес!")
+                    showMessage("🔄 ${mob.getTypeName()} воскрес!")
+                }
+            }
         }
 
-        // ⭐ РЕГЕНЕРАЦИЯ HP ТОЛЬКО НА КАРТЕ (НЕ В БОЮ!)
-        // gameState == GameState.GAME — это проверка, что мы на карте
+        if (deadCount > 0) {
+            println("💀 Всего мертвых мобов: $deadCount")
+        }
+
+        // Удаляем мобов, которые слишком долго мертвы (защита от накопления)
+        // ⭐ УВЕЛИЧИМ ВРЕМЯ ДО 30 СЕКУНД (1800 кадров)
+        location.mobs.removeAll { it.isDead && it.deathTimer > 1800 }
+
+        // Регенерация HP
         if (gameState == GameState.GAME) {
             regenTimer++
+
+            val baseRegen = 1f
+            val enduranceBonus = player.endurance * 0.05f
+            val regenAmount = baseRegen + enduranceBonus
+
             if (regenTimer >= REGEN_INTERVAL) {
                 regenTimer = 0
                 if (player.hp < player.calculateMaxHp()) {
-                    player.hp = min(player.hp + REGEN_AMOUNT, player.calculateMaxHp())
+                    player.hp = min(player.hp + regenAmount, player.calculateMaxHp())
                 }
             }
         }
@@ -161,11 +200,13 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
                     locationManager.moveTo(LocationManager.Location.FOREST)
                     player.x = 60f
                     player.targetX = player.x
+                    bossOnMap = false
                     showMessage("🌲 Вы вошли в Лес!")
                 } else if (player.x < 60f) {
                     locationManager.moveTo(LocationManager.Location.WASTELAND)
                     player.x = worldWidth - 60f
                     player.targetX = player.x
+                    bossOnMap = false
                     showMessage("🏜️ Вы вошли в Пустошь!")
                 }
             }
@@ -174,7 +215,15 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
                     locationManager.moveTo(LocationManager.Location.CITY)
                     player.x = worldWidth - 60f
                     player.targetX = player.x
+                    bossOnMap = false
                     showMessage("🏙️ Вы вернулись в Город!")
+                } else if (player.x > worldWidth - 60f) {
+                    // ⭐ ПЕРЕХОД ИЗ ЛЕСА В СКАЛЫ
+                    locationManager.moveTo(LocationManager.Location.ROCKS)
+                    player.x = 60f
+                    player.targetX = player.x
+                    bossOnMap = false
+                    showMessage("⛰️ Вы вошли в Скалы!")
                 }
             }
             LocationManager.Location.WASTELAND -> {
@@ -182,7 +231,33 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
                     locationManager.moveTo(LocationManager.Location.CITY)
                     player.x = 60f
                     player.targetX = player.x
+                    bossOnMap = false
                     showMessage("🏙️ Вы вернулись в Город!")
+                }
+            }
+            LocationManager.Location.ROCKS -> {
+                if (player.x < 60f) {
+                    locationManager.moveTo(LocationManager.Location.FOREST)
+                    player.x = worldWidth - 60f
+                    player.targetX = player.x
+                    bossOnMap = false
+                    showMessage("🌲 Вы вернулись в Лес!")
+                } else if (player.x > worldWidth - 60f) {
+                    // ⭐ ПЕРЕХОД ИЗ СКАЛ В ЗАМОК
+                    locationManager.moveTo(LocationManager.Location.CASTLE)
+                    player.x = 60f
+                    player.targetX = player.x
+                    bossOnMap = false
+                    showMessage("🏰 Вы вошли в Замок!")
+                }
+            }
+            LocationManager.Location.CASTLE -> {
+                if (player.x < 60f) {
+                    locationManager.moveTo(LocationManager.Location.ROCKS)
+                    player.x = worldWidth - 60f
+                    player.targetX = player.x
+                    bossOnMap = false
+                    showMessage("⛰️ Вы вернулись в Скалы!")
                 }
             }
         }
@@ -195,7 +270,6 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
 
     // ========== СИСТЕМА ПРОКАЧКИ ==========
 
-    // ⭐ ОСНОВНАЯ ПРОВЕРКА ПОВЫШЕНИЯ УРОВНЯ
     private fun checkLevelUp() {
         println("🔍 checkLevelUp() ВЫЗВАН! Опыт: ${player.exp}/${player.maxExp}")
         var leveledUp = false
@@ -207,6 +281,7 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
             leveledUp = true
             println("🎉 УРОВЕНЬ ${player.level}! skillPoints: ${player.skillPoints}")
             showMessage("🎉 УРОВЕНЬ ${player.level}! +5 очков прокачки!")
+            saveGame()
         }
 
         if (leveledUp) {
@@ -223,6 +298,7 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
 
     private fun closeStats() {
         gameState = GameState.GAME
+        saveGame()
     }
 
     private fun upgradeStat(statType: Player.StatType) {
@@ -239,6 +315,7 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
             if (statType == Player.StatType.ENDURANCE) {
                 player.hp = player.calculateMaxHp()
             }
+            saveGame()
         } else {
             showMessage("❌ Нет очков для прокачки!")
         }
@@ -250,20 +327,23 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
         println("⚔️ startBattle() вызван! Моб: ${mob.getTypeName()}")
         isLevelChecked = false
 
-        // ⭐ ОБРАБОТЧИК ДРОПА
         battleManager.onItemDrop = { item ->
             if (inventory.addItem(item)) {
                 showMessage("🗡️ ${item.name} добавлен в инвентарь!")
                 println("✅ ${item.name} добавлен в инвентарь")
+                saveGame()
             } else {
                 showMessage("⚠️ Инвентарь полон! ${item.name} потерян.")
                 println("❌ Инвентарь полон! ${item.name} потерян.")
             }
         }
 
-        battleManager.startBattle(player, mob)
-        battleManager.onBattleEnd = {
-            println("🏁 onBattleEnd() вызван!")
+        // ⭐ УСТАНАВЛИВАЕМ ОБРАБОТЧИК ОКОНЧАНИЯ БОЯ
+        battleManager.onBattleEnd = { victory ->
+            if (victory && !mob.isBoss) {
+                // Если победили обычного моба — проверяем шанс спавна босса
+                checkBossSpawn(mob)
+            }
             gameState = GameState.GAME
             battleManager.endBattle()
             isAttackingInBattle = false
@@ -273,7 +353,10 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
             player.targetY = player.y
             player.isMoving = false
             showMessage("Бой окончен!")
+            saveGame()
         }
+
+        battleManager.startBattle(player, mob, inventory)
         gameState = GameState.BATTLE
         isAttackingInBattle = false
         battleFrameIndex = 0
@@ -281,6 +364,7 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
         showMessage("⚔️ Бой начался!")
     }
 
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     private fun attackInBattle() {
         println("⚔️ attackInBattle() вызван!")
         isAttackingInBattle = true
@@ -298,6 +382,7 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
                 isAttackingInBattle = false
                 println("🔍 Проверяем уровень после победы...")
                 checkLevelUp()
+                saveGame()
             }, 1500)
         } else if (battleManager.state == BattleManager.BattleState.DEFEAT) {
             println("💀 Поражение!")
@@ -309,6 +394,7 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
                 player.x = 400f
                 player.y = 400f
                 isAttackingInBattle = false
+                saveGame()
             }, 1500)
         }
     }
@@ -466,9 +552,17 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
             }
             LocationManager.Location.FOREST -> {
                 canvas.drawText("← 🏙️", 30f - cameraManager.x, screenHeight / 2, arrowPaint)
+                canvas.drawText("⛰️ →", worldWidth - cameraManager.x - 30f, screenHeight / 2, arrowPaint)  // ← В СКАЛЫ
             }
             LocationManager.Location.WASTELAND -> {
                 canvas.drawText("🏙️ →", worldWidth - cameraManager.x - 30f, screenHeight / 2, arrowPaint)
+            }
+            LocationManager.Location.ROCKS -> {
+                canvas.drawText("← 🌲", 30f - cameraManager.x, screenHeight / 2, arrowPaint)
+                canvas.drawText("🏰 →", worldWidth - cameraManager.x - 30f, screenHeight / 2, arrowPaint)  // ← В ЗАМОК
+            }
+            LocationManager.Location.CASTLE -> {
+                canvas.drawText("← ⛰️", 30f - cameraManager.x, screenHeight / 2, arrowPaint)
             }
         }
     }
@@ -477,8 +571,11 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
         val x = player.x - cameraManager.x
         val y = player.y - cameraManager.y
 
+        // ⭐ Выбираем анимацию в зависимости от направления
         currentAnimation = when {
-            player.isMoving -> "run"
+            player.isMoving && player.facing == 1 -> "walk_left"
+            player.isMoving && player.facing == 2 -> "walk_right"
+            player.isMoving -> "walk_right"
             player.attackCooldown > 0 -> "attack"
             else -> "idle"
         }
@@ -488,7 +585,8 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
         if (animationFrames.isNotEmpty()) {
             frameTimer++
             val animation = spriteManager.getAnimation(currentSprite, currentAnimation)
-            if (animation != null && frameTimer > animation.speed) {
+            val speed = animation?.speed ?: 8
+            if (frameTimer > speed) {
                 frameTimer = 0
                 currentFrameIndex = (currentFrameIndex + 1) % animationFrames.size
             }
@@ -497,7 +595,6 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
 
             val displayWidth = 120f
             val displayHeight = 120f
-
             val dstRect = RectF(
                 x - displayWidth / 2,
                 y - displayHeight / 2,
@@ -506,29 +603,24 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
             )
 
             val spriteSheet = spriteManager.getSpriteSheet(currentSprite)
-
             if (spriteSheet != null) {
-                if (player.facing == 1) {
-                    canvas.save()
-                    canvas.scale(-1f, 1f, x, y)
-                    canvas.drawBitmap(spriteSheet, currentFrame, dstRect, null)
-                    canvas.restore()
-                } else {
-                    canvas.drawBitmap(spriteSheet, currentFrame, dstRect, null)
-                }
+                canvas.drawBitmap(spriteSheet, currentFrame, dstRect, null)
             }
         }
     }
 
     fun drawBattlePlayer(canvas: Canvas, x: Float, y: Float, scale: Float) {
-        battleSprite = if (isAttackingInBattle) "battle_attack" else "battle_idle"
-        battleAnimation = if (isAttackingInBattle) "attack" else "idle"
+        // ⭐ Используем НОВОГО персонажа для боя
+        val spriteName = "character_zombie"  // ← Вместо battle_idle/battle_attack
 
-        val animationFrames = spriteManager.getAnimationFrames(battleSprite, battleAnimation)
+        // Определяем анимацию
+        val animName = if (isAttackingInBattle) "attack" else "idle"
+
+        val animationFrames = spriteManager.getAnimationFrames(spriteName, animName)
 
         if (animationFrames.isNotEmpty()) {
             battleFrameTimer++
-            val animation = spriteManager.getAnimation(battleSprite, battleAnimation)
+            val animation = spriteManager.getAnimation(spriteName, animName)
             val speed = animation?.speed ?: 8
 
             if (battleFrameTimer > speed) {
@@ -541,8 +633,8 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
 
             val currentFrame = animationFrames[battleFrameIndex % animationFrames.size]
 
-            val displayWidth = 150f * scale
-            val displayHeight = 150f * scale
+            val displayWidth = 200f * scale  // ← Увеличил для боя
+            val displayHeight = 200f * scale // ← Увеличил для боя
 
             val dstRect = RectF(
                 x - displayWidth / 2,
@@ -551,7 +643,7 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
                 y + displayHeight / 2
             )
 
-            val spriteSheet = spriteManager.getSpriteSheet(battleSprite)
+            val spriteSheet = spriteManager.getSpriteSheet(spriteName)
             if (spriteSheet != null) {
                 canvas.drawBitmap(spriteSheet, currentFrame, dstRect, null)
             }
@@ -616,7 +708,7 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
         }
         canvas.drawText("📊 Хар-ки", btnLeft + btnWidth / 2, 20f + btnHeight * 1.5f + 10f + 8f, statsTextPaint)
 
-        // Индикатор очков прокачки (над кнопкой характеристик)
+        // Индикатор очков прокачки
         if (player.skillPoints > 0) {
             val pointsPaint = Paint().apply {
                 color = Color.YELLOW
@@ -675,6 +767,7 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
 
     // ========== ОБРАБОТКА КАСАНИЙ ==========
 
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (event.action == MotionEvent.ACTION_DOWN) {
             val x = event.x
@@ -690,13 +783,15 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
                 return true
             }
 
-// В onTouchEvent, для GameState.INVENTORY:
+            // ЭКРАН ИНВЕНТАРЯ
             if (gameState == GameState.INVENTORY) {
                 inventoryScreen.handleTouch(
                     x, y, screenWidth, screenHeight, inventory,
-                    { index -> equipItem(index) },      // ← экипировка
-                    { slot -> unequipItem(slot) },      // ← снятие
-                    { closeInventory() }
+                    { index -> equipItem(index) },
+                    { slot -> unequipItem(slot) },
+                    { closeInventory() },
+                    { index -> deleteItem(index) },
+                    { index -> useItem(index) }  // ← ДОБАВЛЯЕМ
                 )
                 return true
             }
@@ -831,36 +926,135 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
 
     fun getPlayerLevel(): Int = player.level
 
+    // ===== ДЛЯ InventoryScreen =====
+    fun getCharacterIdleFrames(): List<Rect> {
+        return spriteManager.getAnimationFrames("character_zombie", "idle")
+    }
+
+    fun getCharacterIdleSpriteSheet(): Bitmap? {
+        return spriteManager.getSpriteSheet("character_zombie")
+    }
+
+    // ===== ИНВЕНТАРЬ =====
     private fun openInventory() {
         gameState = GameState.INVENTORY
     }
 
     private fun closeInventory() {
         gameState = GameState.GAME
+        saveGame()
     }
 
     private fun equipItem(index: Int) {
-        inventory.equip(index)
+        if (inventory.equip(index)) {
+            val items = inventory.getItems()
+            val item = items.getOrNull(index)
+            if (item != null) {
+                showMessage("✅ ${item.name} экипирован!")
+                saveGame()
+            }
+        } else {
+            showMessage("❌ Нельзя экипировать!")
+        }
     }
 
-    // ===== ДЛЯ InventoryScreen =====
-    fun getCharacterIdleFrames(): List<Rect> {
-        return spriteManager.getAnimationFrames("battle_idle", "idle")
-    }
-
-    fun getCharacterIdleSpriteSheet(): Bitmap? {
-        return spriteManager.getSpriteSheet("battle_idle")
-    }
-
-    // Добавь метод для снятия предмета:
     private fun unequipItem(slot: EquipmentSlot) {
         val item = inventory.unequip(slot)
         if (item != null) {
             showMessage("🔽 ${item.name} снят!")
             println("🔽 ${item.name} снят с ${slot.name}")
+            saveGame()
         } else {
             showMessage("❌ Нет места в инвентаре!")
         }
     }
 
+    // ===== СОХРАНЕНИЕ =====
+    private fun loadGame() {
+        val hasSave = saveManager.loadGame(player, inventory)
+        if (hasSave) {
+            if (player.hp > player.calculateMaxHp()) {
+                player.hp = player.calculateMaxHp()
+            }
+            showMessage("💾 Прогресс загружен!")
+        } else {
+            showMessage("🆕 Новая игра!")
+        }
+    }
+
+    private fun saveGame() {
+        saveManager.saveGame(player, inventory)
+        println("💾 Прогресс сохранён")
+    }
+
+    // ⭐ МЕТОД УДАЛЕНИЯ ПРЕДМЕТА
+    private fun deleteItem(index: Int) {
+        val item = inventory.removeItem(index)
+        if (item != null) {
+            showMessage("🗑️ ${item.name} удалён!")
+            inventory.selectedSlot = -1
+            saveGame()
+        } else {
+            showMessage("❌ Не удалось удалить предмет!")
+        }
+    }
+
+    // ⭐ МЕТОД ИСПОЛЬЗОВАНИЯ ПРЕДМЕТА
+    private fun useItem(index: Int) {
+        val items = inventory.getItems()
+        if (index < items.size) {
+            val item = items[index]
+            if (item != null && item.type == Item.ItemType.CONSUMABLE) {
+                if (item.use(player)) {
+                    inventory.removeItem(index)
+                    showMessage("🍰 ${item.name} использован! HP: ${player.hp.toInt()}/${player.calculateMaxHp().toInt()}")
+                    saveGame()
+                } else {
+                    showMessage("❌ HP уже максимальный!")
+                }
+            }
+        }
+    }
+
+    // ⭐ МЕТОД ДЛЯ СПАВНА БОССА
+    private fun checkBossSpawn(mob: Mob) {
+        if (bossOnMap) return  // Если босс уже есть — не спавним нового
+
+        val bossChance = 5  // 5% шанс
+        val random = (0..99).random()
+
+        if (random < bossChance) {
+            // Определяем позицию для босса (ближе к центру)
+            val margin = 200f
+            val bossX = margin + (worldWidth - margin * 2) * (0.2f + 0.6f * (0..100).random() / 100f)
+            val bossY = margin + (worldHeight - margin * 2) * (0.2f + 0.6f * (0..100).random() / 100f)
+
+            // Создаём босса на основе убитого моба
+            val boss = Mob(
+                x = bossX,
+                y = bossY,
+                type = mob.type,
+                hp = mob.maxHp * 3,  // HP в 3 раза больше
+                maxHp = mob.maxHp * 3,
+                level = mob.level + 5,  // На 5 уровней выше
+                isBoss = true
+            ).apply {
+                startX = bossX
+                startY = bossY
+            }
+
+            // Добавляем босса на карту
+            val location = locationManager.getCurrentData()
+            location.mobs.add(boss)
+            bossOnMap = true
+
+            showMessage("👑 БОСС ПОЯВИЛСЯ! ${boss.getTypeName()} (ур.${boss.level})")
+            println("👑 БОСС: ${boss.getTypeName()} появился на карте! (ур.${boss.level})")
+
+            // Визуальный эффект появления босса (зелёные круги)
+            respawnEffectTimer = 40
+            respawnEffectX = bossX - cameraManager.x
+            respawnEffectY = bossY - cameraManager.y
+        }
+    }
 }

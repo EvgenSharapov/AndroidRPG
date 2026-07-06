@@ -30,6 +30,16 @@ class BattleRenderer {
         private var mobKnockbackY = 0f
         private var currentLocation: String = "Город"
 
+        // ⭐ АНИМАЦИЯ АТАКИ МОБОВ
+        private var isSpiderAttacking = false
+        private var isManyEyesAttacking = false
+        private var isRedKnightAttacking = false
+        private var isSlimeGreenAttacking = false
+        private var isSteelKnightAttacking = false
+        private var isGoblinAttacking = false
+        private var attackAnimTimerMob = 0
+        private var attackFrameIndex = 0
+
         // Анимация Флаффи
         private var fluffyAttackTimer = 0
         private var isFluffyAttacking = false
@@ -37,10 +47,10 @@ class BattleRenderer {
         private var fluffyFrameIndex = 0
         private var fluffyFrameTimer = 0
         private val fluffyFrames = listOf(
-            Color.rgb(255, 220, 220), // 1
-            Color.rgb(255, 200, 200), // 2
-            Color.rgb(255, 180, 180), // 3
-            Color.rgb(255, 200, 200)  // 4
+            Color.rgb(255, 220, 220),
+            Color.rgb(255, 200, 200),
+            Color.rgb(255, 180, 180),
+            Color.rgb(255, 200, 200)
         )
 
         data class DamageNumber(
@@ -122,6 +132,40 @@ class BattleRenderer {
                 }
             }
 
+            // ⭐ АНИМАЦИЯ АТАКИ МОБОВ - ИСПРАВЛЕНО
+            if (isMobAttacking) {
+                attackAnimTimerMob++
+
+                // Меняем кадр каждые 3-4 тика
+                if (attackAnimTimerMob % 2 == 0) {  // ← было 4, стало 3 (чуть быстрее)
+                    attackFrameIndex++
+                }
+
+                // Определяем максимальное количество кадров для текущего моба
+                val maxFrames = when {
+                    isSpiderAttacking -> 8
+                    isManyEyesAttacking -> 8
+                    isRedKnightAttacking -> 8
+                    isSlimeGreenAttacking -> 6
+                    isSteelKnightAttacking -> 8
+                    isGoblinAttacking -> 8
+                    else -> 6
+                }
+
+                // ⭐ СБРАСЫВАЕМ, КОГДА ПОКАЗАНЫ ВСЕ КАДРЫ
+                if (attackFrameIndex >= maxFrames) {
+                    isMobAttacking = false
+                    isSpiderAttacking = false
+                    isManyEyesAttacking = false
+                    isRedKnightAttacking = false
+                    isSlimeGreenAttacking = false
+                    isSteelKnightAttacking = false
+                    isGoblinAttacking = false
+                    attackAnimTimerMob = 0
+                    attackFrameIndex = 0
+                }
+            }
+
             // Анимация Флаффи
             if (isFluffyAttacking) {
                 fluffyAttackTimer++
@@ -149,15 +193,11 @@ class BattleRenderer {
             if (abs(mobKnockbackX) < 0.1f) mobKnockbackX = 0f
             if (abs(mobKnockbackY) < 0.1f) mobKnockbackY = 0f
 
-            val iterator = damageNumbers.iterator()
-            while (iterator.hasNext()) {
-                val dn = iterator.next()
+            damageNumbers.removeAll { dn ->
                 dn.y += dn.vy
                 dn.vy += 0.3f
                 dn.life--
-                if (dn.life <= 0) {
-                    iterator.remove()
-                }
+                dn.life <= 0
             }
 
             if (hitEffectTimer > 0) hitEffectTimer--
@@ -246,7 +286,9 @@ class BattleRenderer {
 
         // ===== РИСОВАНИЕ МОБА =====
         private fun drawMobBattle(canvas: Canvas, x: Float, y: Float, mob: com.example.myapplication.model.Mob, gameView: GameView) {
-            val scale = 2.5f
+            println("⚔️ drawMobBattle() для ${mob.getTypeName()} (тип ${mob.type})")
+            val bossScale = if (mob.isBoss) 1.8f else 1f
+            val scale = 2.5f * bossScale
 
             var finalX = x
             var finalY = y
@@ -259,16 +301,26 @@ class BattleRenderer {
             paint.color = Color.argb(80, 0, 0, 0)
             canvas.drawOval(finalX - 80f * scale, finalY + 50f * scale, finalX + 80f * scale, finalY + 80f * scale, paint)
 
-//            // Свечение
-//            val glowPaint = Paint().apply {
-//                color = when (mob.type) {
-//                    0 -> Color.argb(40, 255, 200, 200)
-//                    1 -> Color.argb(40, 255, 200, 100)
-//                    2 -> Color.argb(40, 255, 100, 80)
-//                    else -> Color.argb(40, 200, 200, 200)
-//                }
-//            }
-//            canvas.drawCircle(finalX, finalY, 180f * scale, glowPaint)
+            // Свечение для босса
+            if (mob.isBoss) {
+                val glowPaint = Paint().apply {
+                    shader = RadialGradient(
+                        finalX, finalY, 200f * scale,
+                        Color.argb(80, 255, 215, 0),
+                        Color.TRANSPARENT,
+                        Shader.TileMode.CLAMP
+                    )
+                }
+                canvas.drawCircle(finalX, finalY, 200f * scale, glowPaint)
+
+                val pulse = (30 + sin(System.currentTimeMillis() / 150.0) * 15).toInt()
+                val bossAura = Paint().apply {
+                    color = Color.argb(pulse, 255, 215, 0)
+                    style = Paint.Style.STROKE
+                    strokeWidth = 8f
+                }
+                canvas.drawCircle(finalX, finalY, 100f * scale, bossAura)
+            }
 
             // Аура атаки
             if (isMobAttacking && mob.type != 0) {
@@ -279,25 +331,35 @@ class BattleRenderer {
                 canvas.drawCircle(finalX, finalY, 80f * scale, paint)
             }
 
+            // ⭐ РИСУЕМ ВСЕХ МОБОВ С АНИМАЦИЕЙ АТАКИ
             when (mob.type) {
-                0 -> drawFluffyBattle(canvas, finalX, finalY, scale, gameView)  // ← передаём gameView
-                1 -> drawSpiderBattle(canvas, finalX, finalY, scale, gameView)  // ← ПАУК
+                0 -> drawFluffyBattle(canvas, finalX, finalY, scale, gameView)
+                1 -> drawSpiderBattle(canvas, finalX, finalY, scale, gameView)
                 2 -> drawManyEyesBattle(canvas, finalX, finalY, scale, gameView)
+                3 -> drawRedKnightBattle(canvas, finalX, finalY, scale, gameView)
+                4 -> drawSlimeGreenBattle(canvas, finalX, finalY, scale, gameView)
+                5 -> drawSteelKnightBattle(canvas, finalX, finalY, scale, gameView)
+                6 -> drawGoblinBattle(canvas, finalX, finalY, scale, gameView)
+            }
+
+            // Корона для босса
+            if (mob.isBoss) {
+                val crownPaint = Paint().apply {
+                    textSize = 80f * bossScale
+                    textAlign = Paint.Align.CENTER
+                }
+                canvas.drawText("👑", finalX, finalY - 90f * scale, crownPaint)
             }
         }
 
-        // ===== ФЛАФФИ (БОЙ) - ИСПОЛЬЗУЕМ СПРАЙТ =====
+        // ===== ФЛАФФИ (БОЙ) =====
         private fun drawFluffyBattle(canvas: Canvas, x: Float, y: Float, scale: Float, gameView: GameView) {
-            // Используем тот же спрайт, что и на карте, но с анимацией
-
-            // Получаем кадры для анимации Флаффи
             val spriteName = if (isFluffyAttacking) "fluffy" else "fluffy"
             val animName = if (isFluffyAttacking) "run" else "idle"
 
             val animationFrames = gameView.getMobAnimationFrames(spriteName, animName)
 
             if (animationFrames.isNotEmpty()) {
-                // Выбираем кадр в зависимости от состояния атаки
                 val frameIndex = if (isFluffyAttacking) {
                     (fluffyAttackTimer / 6) % animationFrames.size
                 } else {
@@ -319,14 +381,14 @@ class BattleRenderer {
                 val spriteSheet = gameView.getMobSpriteSheet(spriteName)
                 if (spriteSheet != null) {
                     canvas.drawBitmap(spriteSheet, currentFrame, dstRect, null)
+                } else {
+                    drawFluffyFallback(canvas, x, y, scale)
                 }
             } else {
-                // Если спрайт не загружен — рисуем колобка
                 drawFluffyFallback(canvas, x, y, scale)
             }
         }
 
-        // ===== ЗАПАСНОЙ ВАРИАНТ (если спрайт не загружен) =====
         private fun drawFluffyFallback(canvas: Canvas, x: Float, y: Float, scale: Float) {
             val color = fluffyFrames[fluffyFrameIndex]
             paint.color = color
@@ -364,12 +426,17 @@ class BattleRenderer {
             canvas.drawArc(x - 25f * scale, y + 10f * scale, x + 25f * scale, y + 35f * scale, 0f, -180f, false, paint)
         }
 
-        // ===== ПАУК (БОЙ) =====
+        // ===== ПАУК (БОЙ) С АНИМАЦИЕЙ АТАКИ =====
         private fun drawSpiderBattle(canvas: Canvas, x: Float, y: Float, scale: Float, gameView: GameView) {
-            val animationFrames = gameView.getMobAnimationFrames("spider_battle", "idle")
+            val animName = if (isSpiderAttacking) "attack" else "idle"
+            val animationFrames = gameView.getMobAnimationFrames("spider_battle", animName)
 
             if (animationFrames.isNotEmpty()) {
-                val frameIndex = (System.currentTimeMillis() / 200 % animationFrames.size).toInt()
+                val frameIndex = if (isSpiderAttacking) {
+                    attackFrameIndex % animationFrames.size
+                } else {
+                    (System.currentTimeMillis() / 200 % animationFrames.size).toInt()
+                }
                 val currentFrame = animationFrames[frameIndex % animationFrames.size]
 
                 val displayWidth = 150f * scale
@@ -393,7 +460,6 @@ class BattleRenderer {
             }
         }
 
-        // ===== ЗАПАСНОЙ ВАРИАНТ ПАУКА В БОЮ =====
         private fun drawSpiderFallbackBattle(canvas: Canvas, x: Float, y: Float, scale: Float) {
             paint.color = Color.rgb(100, 150, 50)
             canvas.drawCircle(x, y, 60f * scale, paint)
@@ -421,12 +487,17 @@ class BattleRenderer {
             canvas.drawCircle(x + 17f * scale, y - 15f * scale, 7f * scale, paint)
         }
 
-        // ===== МНОГОГЛАЗ (БОЙ) =====
+        // ===== МНОГОГЛАЗ (БОЙ) С АНИМАЦИЕЙ АТАКИ =====
         private fun drawManyEyesBattle(canvas: Canvas, x: Float, y: Float, scale: Float, gameView: GameView) {
-            val animationFrames = gameView.getMobAnimationFrames("manyeyes_battle", "idle")
+            val animName = if (isManyEyesAttacking) "attack" else "idle"
+            val animationFrames = gameView.getMobAnimationFrames("manyeyes_battle", animName)
 
             if (animationFrames.isNotEmpty()) {
-                val frameIndex = (System.currentTimeMillis() / 200 % animationFrames.size).toInt()
+                val frameIndex = if (isManyEyesAttacking) {
+                    attackFrameIndex % animationFrames.size
+                } else {
+                    (System.currentTimeMillis() / 200 % animationFrames.size).toInt()
+                }
                 val currentFrame = animationFrames[frameIndex % animationFrames.size]
 
                 val displayWidth = 150f * scale
@@ -450,7 +521,6 @@ class BattleRenderer {
             }
         }
 
-        // ===== ЗАПАСНОЙ ВАРИАНТ МНОГОГЛАЗА В БОЮ =====
         private fun drawManyEyesFallbackBattle(canvas: Canvas, x: Float, y: Float, scale: Float) {
             paint.color = Color.rgb(150, 50, 200)
             canvas.drawCircle(x, y, 60f * scale, paint)
@@ -467,6 +537,169 @@ class BattleRenderer {
                 paint.color = Color.RED
                 canvas.drawCircle(x + (ex + 3f) * scale, y + (ey + 2f) * scale, 7f * scale, paint)
             }
+        }
+
+        // ===== КРАСНЫЙ РЫЦАРЬ (БОЙ) С АНИМАЦИЕЙ АТАКИ =====
+        private fun drawRedKnightBattle(canvas: Canvas, x: Float, y: Float, scale: Float, gameView: GameView) {
+            val animName = if (isRedKnightAttacking) "attack" else "idle"
+            val animationFrames = gameView.getMobAnimationFrames("red_knight_battle", animName)
+            if (animationFrames.isNotEmpty()) {
+                val frameIndex = if (isRedKnightAttacking) {
+                    attackFrameIndex % animationFrames.size
+                } else {
+                    (System.currentTimeMillis() / 200 % animationFrames.size).toInt()
+                }
+                val currentFrame = animationFrames[frameIndex % animationFrames.size]
+                val displayWidth = 150f * scale
+                val displayHeight = 150f * scale
+                val dstRect = RectF(x - displayWidth / 2, y - displayHeight / 2, x + displayWidth / 2, y + displayHeight / 2)
+                val spriteSheet = gameView.getMobSpriteSheet("red_knight_battle")
+                if (spriteSheet != null) {
+                    canvas.drawBitmap(spriteSheet, currentFrame, dstRect, null)
+                } else {
+                    drawFallbackRedKnightBattle(canvas, x, y, scale)
+                }
+            } else {
+                drawFallbackRedKnightBattle(canvas, x, y, scale)
+            }
+        }
+
+        private fun drawFallbackRedKnightBattle(canvas: Canvas, x: Float, y: Float, scale: Float) {
+            paint.color = Color.rgb(200, 50, 50)
+            canvas.drawCircle(x, y, 60f * scale, paint)
+            paint.color = Color.WHITE
+            canvas.drawCircle(x - 20f * scale, y - 15f * scale, 14f * scale, paint)
+            canvas.drawCircle(x + 20f * scale, y - 15f * scale, 14f * scale, paint)
+            paint.color = Color.BLACK
+            canvas.drawCircle(x - 23f * scale, y - 15f * scale, 7f * scale, paint)
+            canvas.drawCircle(x + 17f * scale, y - 15f * scale, 7f * scale, paint)
+        }
+
+        // ===== ЗЕЛЁНЫЙ СЛИЗЕНЬ (БОЙ) С АНИМАЦИЕЙ АТАКИ =====
+        private fun drawSlimeGreenBattle(canvas: Canvas, x: Float, y: Float, scale: Float, gameView: GameView) {
+            val animName = if (isSlimeGreenAttacking) "attack" else "idle"
+            val animationFrames = gameView.getMobAnimationFrames("slime_green_battle", animName)
+            if (animationFrames.isNotEmpty()) {
+                val frameIndex = if (isSlimeGreenAttacking) {
+                    attackFrameIndex % animationFrames.size
+                } else {
+                    (System.currentTimeMillis() / 200 % animationFrames.size).toInt()
+                }
+                val currentFrame = animationFrames[frameIndex % animationFrames.size]
+                val displayWidth = 150f * scale
+                val displayHeight = 150f * scale
+                val dstRect = RectF(x - displayWidth / 2, y - displayHeight / 2, x + displayWidth / 2, y + displayHeight / 2)
+                val spriteSheet = gameView.getMobSpriteSheet("slime_green_battle")
+                if (spriteSheet != null) {
+                    canvas.drawBitmap(spriteSheet, currentFrame, dstRect, null)
+                } else {
+                    drawFallbackSlimeGreenBattle(canvas, x, y, scale)
+                }
+            } else {
+                drawFallbackSlimeGreenBattle(canvas, x, y, scale)
+            }
+        }
+
+        private fun drawFallbackSlimeGreenBattle(canvas: Canvas, x: Float, y: Float, scale: Float) {
+            paint.color = Color.rgb(100, 200, 100)
+            canvas.drawCircle(x, y, 60f * scale, paint)
+            paint.color = Color.WHITE
+            canvas.drawCircle(x - 20f * scale, y - 15f * scale, 14f * scale, paint)
+            canvas.drawCircle(x + 20f * scale, y - 15f * scale, 14f * scale, paint)
+            paint.color = Color.BLACK
+            canvas.drawCircle(x - 23f * scale, y - 15f * scale, 7f * scale, paint)
+            canvas.drawCircle(x + 17f * scale, y - 15f * scale, 7f * scale, paint)
+            paint.color = Color.BLACK
+            paint.strokeWidth = 4f * scale
+            paint.style = Paint.Style.STROKE
+            canvas.drawArc(x - 20f * scale, y + 10f * scale, x + 20f * scale, y + 30f * scale, 0f, 180f, false, paint)
+        }
+
+        // ===== СТАЛЬНОЙ РЫЦАРЬ (БОЙ) С АНИМАЦИЕЙ АТАКИ =====
+        private fun drawSteelKnightBattle(canvas: Canvas, x: Float, y: Float, scale: Float, gameView: GameView) {
+            val animName = if (isSteelKnightAttacking) "attack" else "idle"
+            val animationFrames = gameView.getMobAnimationFrames("steel_knight_battle", animName)
+            if (animationFrames.isNotEmpty()) {
+                val frameIndex = if (isSteelKnightAttacking) {
+                    attackFrameIndex % animationFrames.size
+                } else {
+                    (System.currentTimeMillis() / 200 % animationFrames.size).toInt()
+                }
+                val currentFrame = animationFrames[frameIndex % animationFrames.size]
+                val displayWidth = 150f * scale
+                val displayHeight = 150f * scale
+                val dstRect = RectF(x - displayWidth / 2, y - displayHeight / 2, x + displayWidth / 2, y + displayHeight / 2)
+                val spriteSheet = gameView.getMobSpriteSheet("steel_knight_battle")
+                if (spriteSheet != null) {
+                    canvas.drawBitmap(spriteSheet, currentFrame, dstRect, null)
+                } else {
+                    drawFallbackSteelKnightBattle(canvas, x, y, scale)
+                }
+            } else {
+                drawFallbackSteelKnightBattle(canvas, x, y, scale)
+            }
+        }
+
+        private fun drawFallbackSteelKnightBattle(canvas: Canvas, x: Float, y: Float, scale: Float) {
+            paint.color = Color.rgb(150, 150, 200)
+            canvas.drawCircle(x, y, 60f * scale, paint)
+            paint.color = Color.WHITE
+            canvas.drawCircle(x - 20f * scale, y - 15f * scale, 14f * scale, paint)
+            canvas.drawCircle(x + 20f * scale, y - 15f * scale, 14f * scale, paint)
+            paint.color = Color.BLACK
+            canvas.drawCircle(x - 23f * scale, y - 15f * scale, 7f * scale, paint)
+            canvas.drawCircle(x + 17f * scale, y - 15f * scale, 7f * scale, paint)
+            paint.color = Color.rgb(180, 180, 200)
+            paint.style = Paint.Style.STROKE
+            paint.strokeWidth = 4f * scale
+            canvas.drawArc(x - 25f * scale, y - 25f * scale, x + 25f * scale, y + 5f * scale, 0f, 180f, false, paint)
+        }
+
+        // ===== ГОБЛИН (БОЙ) С АНИМАЦИЕЙ АТАКИ =====
+        private fun drawGoblinBattle(canvas: Canvas, x: Float, y: Float, scale: Float, gameView: GameView) {
+            val animName = if (isGoblinAttacking) "attack" else "idle"
+            val animationFrames = gameView.getMobAnimationFrames("goblin", animName)
+
+            if (animationFrames.isNotEmpty()) {
+                val frameIndex = if (isGoblinAttacking) {
+                    attackFrameIndex % animationFrames.size
+                } else {
+                    (System.currentTimeMillis() / 200 % animationFrames.size).toInt()
+                }
+                val currentFrame = animationFrames[frameIndex % animationFrames.size]
+
+                // ⭐ УВЕЛИЧЕННЫЙ РАЗМЕР ДЛЯ БОЯ
+                val battleScale = 2.5f
+                val displayWidth = 80f * scale * battleScale
+                val displayHeight = 80f * scale * battleScale
+
+                val dstRect = RectF(
+                    x - displayWidth / 2,
+                    y - displayHeight / 2,
+                    x + displayWidth / 2,
+                    y + displayHeight / 2
+                )
+
+                val spriteSheet = gameView.getMobSpriteSheet("goblin")
+                if (spriteSheet != null) {
+                    canvas.drawBitmap(spriteSheet, currentFrame, dstRect, null)
+                } else {
+                    drawFallbackGoblinBattle(canvas, x, y, scale)
+                }
+            } else {
+                drawFallbackGoblinBattle(canvas, x, y, scale)
+            }
+        }
+
+        private fun drawFallbackGoblinBattle(canvas: Canvas, x: Float, y: Float, scale: Float) {
+            paint.color = Color.rgb(50, 180, 50)
+            canvas.drawCircle(x, y, 60f * scale, paint)
+            paint.color = Color.WHITE
+            canvas.drawCircle(x - 20f * scale, y - 15f * scale, 14f * scale, paint)
+            canvas.drawCircle(x + 20f * scale, y - 15f * scale, 14f * scale, paint)
+            paint.color = Color.BLACK
+            canvas.drawCircle(x - 23f * scale, y - 15f * scale, 7f * scale, paint)
+            canvas.drawCircle(x + 17f * scale, y - 15f * scale, 7f * scale, paint)
         }
 
         // ===== ЭФФЕКТЫ =====
@@ -616,9 +849,21 @@ class BattleRenderer {
             damageNumbers.add(DamageNumber(x, y, text, 70, 70, -6f, color))
         }
 
-        fun triggerMobAttack() {
+        // ⭐ ОБНОВЛЁННЫЙ МЕТОД С ПЕРЕДАЧЕЙ ТИПА МОБА
+        fun triggerMobAttack(mobType: Int = -1) {
             isMobAttacking = true
-            Handler(Looper.getMainLooper()).postDelayed({ isMobAttacking = false }, 500)
+            attackAnimTimerMob = 0
+            attackFrameIndex = 0
+
+            // Устанавливаем флаг для конкретного моба
+            when (mobType) {
+                1 -> isSpiderAttacking = true
+                2 -> isManyEyesAttacking = true
+                3 -> isRedKnightAttacking = true
+                4 -> isSlimeGreenAttacking = true
+                5 -> isSteelKnightAttacking = true
+                6 -> isGoblinAttacking = true
+            }
         }
 
         fun triggerFluffyAttack() {
@@ -641,9 +886,17 @@ class BattleRenderer {
             isPlayerAttacking = false
             isMobAttacking = false
             isFluffyAttacking = false
+            isSpiderAttacking = false
+            isManyEyesAttacking = false
+            isRedKnightAttacking = false
+            isSlimeGreenAttacking = false
+            isSteelKnightAttacking = false
+            isGoblinAttacking = false
             mobKnockbackX = 0f
             mobKnockbackY = 0f
             attackAnimTimer = 0
+            attackAnimTimerMob = 0
+            attackFrameIndex = 0
             fluffyOffsetX = 0f
             fluffyAttackTimer = 0
             fluffyFrameIndex = 0

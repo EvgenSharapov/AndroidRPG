@@ -12,12 +12,17 @@ data class Mob(
     var level: Int = 1,
     var respawnTimer: Int = 0,  // ← ТАЙМЕР РЕСПАУНА
     var startX: Float = x,      // ← НАЧАЛЬНАЯ ПОЗИЦИЯ (для респауна)
-    var startY: Float = y       // ← НАЧАЛЬНАЯ ПОЗИЦИЯ (для респауна)
+    var startY: Float = y,     // ← НАЧАЛЬНАЯ ПОЗИЦИЯ (для респауна)
+    var isBoss: Boolean = false
 ) {
     fun getTypeName(): String = when (type) {
-        0 -> "Флаффи"
-        1 -> "Паук"
-        2 -> "Многоглаз"
+        0 -> if (isBoss) "👑 Флаффи-босс" else "Флаффи"
+        1 -> if (isBoss) "👑 Паук-босс" else "Паук"
+        2 -> if (isBoss) "👑 Многоглаз-босс" else "Многоглаз"
+        3 -> if (isBoss) "👑 Красный рыцарь" else "Красный рыцарь"
+        4 -> if (isBoss) "👑 Зелёный слизень" else "Зелёный слизень"
+        5 -> if (isBoss) "👑 Стальной рыцарь" else "Стальной рыцарь"
+        6 -> if (isBoss) "👑 Гоблин-босс" else "Гоблин"
         else -> "Моб"
     }
 
@@ -28,7 +33,12 @@ data class Mob(
         else -> android.graphics.Color.GRAY
     }
 
-    fun getExpReward(): Int = level * 10
+    fun getExpReward(): Int {
+        val base = level * 10
+        return if (isBoss) (base * 5).toInt() else base
+    }
+
+    fun getSizeMultiplier(): Float = if (isBoss) 3.5f else 1f  // Босс в 3.5 раза больше
 
     fun respawn() {
         isDead = false
@@ -37,5 +47,6 @@ data class Mob(
         y = startY
         deathTimer = 0
         respawnTimer = 0
+        isBoss = false
     }
 }

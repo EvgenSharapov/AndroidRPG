@@ -18,14 +18,6 @@ class Inventory {
         return true
     }
 
-    // Удалить предмет из инвентаря
-    fun removeItem(index: Int): Item? {
-        if (index < 0 || index >= items.size) return null
-        val item = items[index]
-        items[index] = null
-        return item
-    }
-
     // Экипировать предмет
     fun equip(index: Int): Boolean {
         val item = items[index] ?: return false
@@ -112,4 +104,23 @@ class Inventory {
 
     // Проверить, занят ли слот
     fun isSlotEquipped(slot: EquipmentSlot): Boolean = equipment.containsKey(slot)
+
+    // В классе Inventory добавь:
+    fun setItems(newItems: List<Item?>) {
+        for (i in 0 until minOf(items.size, newItems.size)) {
+            items[i] = newItems[i]
+        }
+    }
+
+    fun setEquipment(newEquipment: Map<EquipmentSlot, Item>) {
+        equipment.clear()
+        equipment.putAll(newEquipment)
+    }
+
+    fun removeItem(index: Int): Item? {
+        if (index < 0 || index >= items.size) return null
+        val item = items[index]
+        items[index] = null
+        return item
+    }
 }

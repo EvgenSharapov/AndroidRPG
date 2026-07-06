@@ -1,8 +1,10 @@
 package com.example.myapplication.manager
 
 import android.graphics.Color
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import androidx.annotation.RequiresApi
 import com.example.myapplication.model.*
 import com.example.myapplication.renderer.BattleRenderer
 
@@ -14,16 +16,16 @@ class BattleManager {
     var state = BattleState.NONE
     var currentMob: Mob? = null
     var player: Player? = null
-    var onBattleEnd: (() -> Unit)? = null
-
+    var onBattleEnd: ((Boolean) -> Unit)? = null
     var onItemDrop: ((Item) -> Unit)? = null
 
     private var turnTimer = 0
     private var isProcessing = false
     private val mainHandler = Handler(Looper.getMainLooper())
     private val random = java.util.Random()
+    private val dropManager = DropManager()
 
-    fun startBattle(player: Player, mob: Mob) {
+    fun startBattle(player: Player, mob: Mob, inventory: Inventory) {
         this.player = player
         this.currentMob = mob
         state = BattleState.STARTED
@@ -44,17 +46,24 @@ class BattleManager {
                     isProcessing = true
                     turnTimer = 0
 
-                    // Запускаем анимацию атаки моба
                     if (currentMob?.type == 0) {
-                        // Флаффи атакует с анимацией подбегания
                         BattleRenderer.triggerFluffyAttack()
                     } else {
-                        BattleRenderer.triggerMobAttack()
+                        // ⭐ ПЕРЕДАЁМ ТИП МОБА ДЛЯ АНИМАЦИИ АТАКИ
+                        BattleRenderer.triggerMobAttack(currentMob?.type ?: -1)
                     }
 
                     mainHandler.postDelayed({
                         val mob = currentMob!!
-                        val damage = 5f + random.nextInt(10).toFloat()
+                        var damage = 5f + random.nextInt(10).toFloat()
+
+                        when (mob.type) {
+                            3, 4, 5 -> damage *= 2f
+                        }
+
+                        if (mob.isBoss) {
+                            damage *= 1.5f
+                        }
                         player!!.hp -= damage
 
                         if (player!!.hp < 0) player!!.hp = 0f
@@ -69,7 +78,7 @@ class BattleManager {
                             player!!.hp = 0f
                             state = BattleState.DEFEAT
                             mainHandler.postDelayed({
-                                onBattleEnd?.invoke()
+                                onBattleEnd?.invoke(false)
                             }, 2000)
                         } else {
                             state = BattleState.PLAYER_TURN
@@ -82,7 +91,7 @@ class BattleManager {
                 if (!isProcessing) {
                     isProcessing = true
                     mainHandler.postDelayed({
-                        onBattleEnd?.invoke()
+                        onBattleEnd?.invoke(true)
                         isProcessing = false
                     }, 2000)
                 }
@@ -94,6 +103,7 @@ class BattleManager {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     fun playerAttack() {
         if (state != BattleState.PLAYER_TURN || currentMob == null || isProcessing) return
 
@@ -103,19 +113,26 @@ class BattleManager {
         BattleRenderer.triggerPlayerAttack()
 
         val baseDamage = 10f + (player?.level?.times(2) ?: 2).toFloat()
+        val bossMultiplier = if (mob.isBoss) 0.5f else 1f
         val bonusDamage = when (mob.type) {
             0 -> 5f
             1 -> 0f
             2 -> -5f
             else -> 0f
         }
-        val damage = baseDamage + bonusDamage + random.nextInt(5).toFloat()
+        val damage = (baseDamage + bonusDamage + random.nextInt(5).toFloat()) * bossMultiplier
         mob.hp -= damage
         if (mob.hp < 0) mob.hp = 0f
 
-        BattleRenderer.triggerHitEffect(mob.x, mob.y)
-        BattleRenderer.showDamageNumber(mob.x, mob.y - 50f, "-${damage.toInt()}", Color.YELLOW)
-        BattleRenderer.knockbackMob(40f, -15f)
+        if (mob.isBoss) {
+            BattleRenderer.triggerHitEffect(mob.x, mob.y)
+            BattleRenderer.showDamageNumber(mob.x, mob.y - 70f, "-${damage.toInt()} 💥", Color.rgb(255, 200, 100))
+            BattleRenderer.knockbackMob(20f, -10f)
+        } else {
+            BattleRenderer.triggerHitEffect(mob.x, mob.y)
+            BattleRenderer.showDamageNumber(mob.x, mob.y - 50f, "-${damage.toInt()}", Color.YELLOW)
+            BattleRenderer.knockbackMob(40f, -15f)
+        }
 
         mainHandler.postDelayed({
             if (mob.hp <= 0) {
@@ -123,35 +140,29 @@ class BattleManager {
                 mob.isDead = true
                 state = BattleState.VICTORY
 
-                // ⭐ ДРОП ПРЕДМЕТОВ
-                // Шанс дропа меча с Флаффи (20%)
-                if (mob.type == 0) {  // Флаффи
-                    val dropChance = random.nextInt(100)
-                    if (dropChance < 20) {
-                        val sword = Item(
-                            id = "sword_01",
-                            name = "Старый меч",
-                            type = Item.ItemType.WEAPON,
-                            icon = null,
-                            description = "Простой меч, найденный у Флаффи",
-                            stats = ItemStats(attack = 5)
-                        )
-                        // ⭐ ВЫЗЫВАЕМ CALLBACK!
-                        onItemDrop?.invoke(sword) ?: println("❌ onItemDrop is NULL!")
+                val (droppedItems, gold) = dropManager.getDropForMob(mob)
 
-                        BattleRenderer.showDamageNumber(
-                            mob.x, mob.y - 130f,
-                            "🗡️ Дроп: Старый меч!", Color.rgb(255, 200, 100)
-                        )
-                        println("🗡️ Дроп: Старый меч! (20%)")
-                    }
+                if (gold > 0) {
+                    player?.gold = (player?.gold ?: 0) + gold
+                    val goldColor = if (mob.isBoss) Color.rgb(255, 215, 0) else Color.rgb(255, 215, 0)
+                    BattleRenderer.showDamageNumber(
+                        mob.x, mob.y - 130f,
+                        if (mob.isBoss) "💰 +${gold} золота! (БОСС)" else "💰 +${gold} золота!",
+                        goldColor
+                    )
+                    println("💰 Добавлено $gold золота! Всего: ${player?.gold}")
                 }
 
-                // ⭐ РАСЧЁТ ОПЫТА
+                for (item in droppedItems) {
+                    onItemDrop?.invoke(item)
+                    println("📦 Дроп: ${item.name}")
+                }
+
                 val playerLevel = player?.level ?: 1
                 val mobLevel = mob.level
                 val levelDiff = mobLevel - playerLevel
-                var expReward = mobLevel * 10
+
+                var expReward = if (mob.isBoss) mobLevel * 50 else mobLevel * 10
 
                 if (levelDiff <= -2) {
                     expReward = (expReward * 0.3f).toInt()
@@ -166,7 +177,8 @@ class BattleManager {
 
                 BattleRenderer.showDamageNumber(
                     mob.x, mob.y - 100f,
-                    "+${expReward} EXP 💫", Color.rgb(100, 200, 255)
+                    if (mob.isBoss) "👑 +${expReward} EXP! (БОСС)" else "+${expReward} EXP 💫",
+                    if (mob.isBoss) Color.rgb(255, 215, 0) else Color.rgb(100, 200, 255)
                 )
             } else {
                 state = BattleState.ENEMY_TURN

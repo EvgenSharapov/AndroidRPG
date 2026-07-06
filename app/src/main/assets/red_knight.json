@@ -1,0 +1,89 @@
+{
+  "frames": {
+    "red_knight-1.png": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "duration": 125
+    },
+    "red_knight-2.png": {
+      "frame": {
+        "x": 64,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "duration": 125
+    },
+    "red_knight-3.png": {
+      "frame": {
+        "x": 128,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "duration": 125
+    },
+    "red_knight-4.png": {
+      "frame": {
+        "x": 0,
+        "y": 64,
+        "w": 64,
+        "h": 64
+      },
+      "duration": 125
+    },
+    "red_knight-5.png": {
+      "frame": {
+        "x": 64,
+        "y": 64,
+        "w": 64,
+        "h": 64
+      },
+      "duration": 125
+    },
+    "red_knight-6.png": {
+      "frame": {
+        "x": 128,
+        "y": 64,
+        "w": 64,
+        "h": 64
+      },
+      "duration": 125
+    },
+    "red_knight-7.png": {
+      "frame": {
+        "x": 0,
+        "y": 128,
+        "w": 64,
+        "h": 64
+      },
+      "duration": 125
+    },
+    "red_knight-8.png": {
+      "frame": {
+        "x": 64,
+        "y": 128,
+        "w": 64,
+        "h": 64
+      },
+      "duration": 125
+    }
+  },
+  "meta": {
+    "app": "sprite-ai.art",
+    "version": "1.0",
+    "image": "red_knight.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 192,
+      "h": 192
+    },
+    "scale": "1",
+    "fps": 8,
+    "frameCount": 8
+  }
+}

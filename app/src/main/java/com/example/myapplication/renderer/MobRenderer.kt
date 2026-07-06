@@ -3,7 +3,6 @@ package com.example.myapplication.renderer
 import android.graphics.*
 import com.example.myapplication.GameView
 import com.example.myapplication.model.Mob
-import com.example.myapplication.SpriteManager
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -16,24 +15,55 @@ object MobRenderer {
     fun drawMob(canvas: Canvas, mob: Mob, drawX: Float, drawY: Float, isSelected: Boolean, gameView: GameView? = null) {
         if (mob.isDead) return
 
+        val sizeMultiplier = if (mob.isBoss) 3.0f else 1.0f
+        val baseSize = 25f * sizeMultiplier
+
+        // Тень
         val shadowPaint = Paint().apply {
             color = Color.argb(60, 0, 0, 0)
         }
-        canvas.drawOval(drawX - 35f, drawY + 25f, drawX + 35f, drawY + 40f, shadowPaint)
+        canvas.drawOval(drawX - baseSize - 10f, drawY + baseSize + 5f, drawX + baseSize + 10f, drawY + baseSize + 20f, shadowPaint)
 
-        when (mob.type) {
-            0 -> drawFluffyOnMap(canvas, drawX, drawY, mob, gameView)
-            1 -> drawSpiderOnMap(canvas, drawX, drawY, mob, gameView)  // ← ПАУК
-            2 -> drawManyEyesOnMap(canvas, drawX, drawY, mob, gameView)
-            else -> drawDefault(canvas, drawX, drawY)
+        // Свечение для босса
+        if (mob.isBoss) {
+            val glowPaint = Paint().apply {
+                shader = RadialGradient(
+                    drawX, drawY, 120f,
+                    Color.argb(80, 255, 215, 0),
+                    Color.TRANSPARENT,
+                    Shader.TileMode.CLAMP
+                )
+            }
+            canvas.drawCircle(drawX, drawY, 120f, glowPaint)
         }
 
-        drawHPBar(canvas, drawX, drawY, mob)
+        // ⭐ РИСУЕМ ВСЕХ МОБОВ (ДОБАВЛЕНЫ ТИПЫ 3, 4, 5)
+        when (mob.type) {
+            0 -> drawFluffyOnMap(canvas, drawX, drawY, mob, gameView, sizeMultiplier)
+            1 -> drawSpiderOnMap(canvas, drawX, drawY, mob, gameView, sizeMultiplier)
+            2 -> drawManyEyesOnMap(canvas, drawX, drawY, mob, gameView, sizeMultiplier)
+            3 -> drawRedKnightOnMap(canvas, drawX, drawY, mob, gameView, sizeMultiplier)
+            4 -> drawSlimeGreenOnMap(canvas, drawX, drawY, mob, gameView, sizeMultiplier)
+            5 -> drawSteelKnightOnMap(canvas, drawX, drawY, mob, gameView, sizeMultiplier)
+            6 -> drawGoblinOnMap(canvas, drawX, drawY, mob, gameView, sizeMultiplier)
+            else -> drawDefault(canvas, drawX, drawY, sizeMultiplier)
+        }
+
+        drawHPBar(canvas, drawX, drawY, mob, sizeMultiplier)
+
+        if (mob.isBoss) {
+            val crownPaint = Paint().apply {
+                textSize = 40f * sizeMultiplier
+                textAlign = Paint.Align.CENTER
+            }
+            canvas.drawText("👑", drawX, drawY - baseSize - 30f * sizeMultiplier, crownPaint)
+        }
 
         val playerLevel = gameView?.getPlayerLevel() ?: 1
         val levelDiff = mob.level - playerLevel
 
         val nameColor = when {
+            mob.isBoss -> Color.rgb(255, 215, 0)
             levelDiff >= 2 -> Color.RED
             levelDiff >= 1 -> Color.YELLOW
             levelDiff <= -2 -> Color.GREEN
@@ -42,41 +72,36 @@ object MobRenderer {
 
         val typePaint = Paint().apply {
             color = nameColor
-            textSize = 14f
+            textSize = if (mob.isBoss) 22f * sizeMultiplier else 14f * sizeMultiplier
             textAlign = Paint.Align.CENTER
             typeface = Typeface.DEFAULT_BOLD
         }
-        canvas.drawText("${mob.getTypeName()} (ур.${mob.level})", drawX, drawY + 55f, typePaint)
+        canvas.drawText(mob.getTypeName() + if (mob.isBoss) " 👑" else "", drawX, drawY + baseSize + 30f * sizeMultiplier, typePaint)
 
         if (isSelected) {
             val selectPaint = Paint().apply {
                 color = Color.argb(80, 255, 255, 0)
                 style = Paint.Style.STROKE
-                strokeWidth = 3f
+                strokeWidth = 3f * sizeMultiplier
             }
-            canvas.drawCircle(drawX, drawY, 35f, selectPaint)
+            canvas.drawCircle(drawX, drawY, baseSize + 10f, selectPaint)
         }
     }
 
-    // ===== ФЛАФФИ НА КАРТЕ (используем спрайт) =====
-    private fun drawFluffyOnMap(canvas: Canvas, x: Float, y: Float, mob: Mob, gameView: GameView?) {
+    private fun drawFluffyOnMap(canvas: Canvas, x: Float, y: Float, mob: Mob, gameView: GameView?, sizeMultiplier: Float = 1f) {
         if (gameView == null) {
-            // Если GameView не передан — рисуем упрощённую версию
-            drawFluffyFallbackMap(canvas, x, y)
+            drawFluffyFallbackMap(canvas, x, y, sizeMultiplier)
             return
         }
 
-        // Получаем кадры для анимации Флаффи
         val animationFrames = gameView.getMobAnimationFrames("fluffy", "idle")
 
         if (animationFrames.isNotEmpty()) {
-            // Используем первый кадр (или анимируем медленно)
             val frameIndex = (System.currentTimeMillis() / 300 % animationFrames.size).toInt()
             val currentFrame = animationFrames[frameIndex]
 
-            // Маленький размер для карты
-            val displayWidth = 60f
-            val displayHeight = 60f
+            val displayWidth = 60f * sizeMultiplier
+            val displayHeight = 60f * sizeMultiplier
 
             val dstRect = RectF(
                 x - displayWidth / 2,
@@ -89,35 +114,36 @@ object MobRenderer {
             if (spriteSheet != null) {
                 canvas.drawBitmap(spriteSheet, currentFrame, dstRect, null)
             } else {
-                drawFluffyFallbackMap(canvas, x, y)
+                drawFluffyFallbackMap(canvas, x, y, sizeMultiplier)
             }
         } else {
-            drawFluffyFallbackMap(canvas, x, y)
+            drawFluffyFallbackMap(canvas, x, y, sizeMultiplier)
         }
     }
 
-    // ===== ЗАПАСНОЙ ВАРИАНТ ФЛАФФИ НА КАРТЕ =====
-    private fun drawFluffyFallbackMap(canvas: Canvas, x: Float, y: Float) {
+    // ===== ЗАПАСНОЙ ВАРИАНТ ФЛАФФИ =====
+    private fun drawFluffyFallbackMap(canvas: Canvas, x: Float, y: Float, sizeMultiplier: Float = 1f) {
+        val radius = 25f * sizeMultiplier
         paint.color = Color.rgb(255, 200, 200)
-        canvas.drawCircle(x, y, 25f, paint)
+        canvas.drawCircle(x, y, radius, paint)
 
         paint.color = Color.WHITE
-        canvas.drawCircle(x - 8f, y - 6f, 6f, paint)
-        canvas.drawCircle(x + 8f, y - 6f, 6f, paint)
+        canvas.drawCircle(x - 8f * sizeMultiplier, y - 6f * sizeMultiplier, 6f * sizeMultiplier, paint)
+        canvas.drawCircle(x + 8f * sizeMultiplier, y - 6f * sizeMultiplier, 6f * sizeMultiplier, paint)
         paint.color = Color.BLACK
-        canvas.drawCircle(x - 10f, y - 6f, 3f, paint)
-        canvas.drawCircle(x + 6f, y - 6f, 3f, paint)
+        canvas.drawCircle(x - 10f * sizeMultiplier, y - 6f * sizeMultiplier, 3f * sizeMultiplier, paint)
+        canvas.drawCircle(x + 6f * sizeMultiplier, y - 6f * sizeMultiplier, 3f * sizeMultiplier, paint)
 
         paint.color = Color.BLACK
-        paint.strokeWidth = 2f
+        paint.strokeWidth = 2f * sizeMultiplier
         paint.style = Paint.Style.STROKE
-        canvas.drawArc(x - 8f, y + 4f, x + 8f, y + 12f, 0f, 180f, false, paint)
+        canvas.drawArc(x - 8f * sizeMultiplier, y + 4f * sizeMultiplier, x + 8f * sizeMultiplier, y + 12f * sizeMultiplier, 0f, 180f, false, paint)
     }
 
     // ===== ПАУК НА КАРТЕ =====
-    private fun drawSpiderOnMap(canvas: Canvas, x: Float, y: Float, mob: Mob, gameView: GameView?) {
+    private fun drawSpiderOnMap(canvas: Canvas, x: Float, y: Float, mob: Mob, gameView: GameView?, sizeMultiplier: Float = 1f) {
         if (gameView == null) {
-            drawSpiderFallback(canvas, x, y)
+            drawSpiderFallback(canvas, x, y, sizeMultiplier)
             return
         }
 
@@ -127,8 +153,8 @@ object MobRenderer {
             val frameIndex = (System.currentTimeMillis() / 300 % animationFrames.size).toInt()
             val currentFrame = animationFrames[frameIndex]
 
-            val displayWidth = 60f
-            val displayHeight = 60f
+            val displayWidth = 60f * sizeMultiplier
+            val displayHeight = 60f * sizeMultiplier
 
             val dstRect = RectF(
                 x - displayWidth / 2,
@@ -141,46 +167,46 @@ object MobRenderer {
             if (spriteSheet != null) {
                 canvas.drawBitmap(spriteSheet, currentFrame, dstRect, null)
             } else {
-                drawSpiderFallback(canvas, x, y)
+                drawSpiderFallback(canvas, x, y, sizeMultiplier)
             }
         } else {
-            drawSpiderFallback(canvas, x, y)
+            drawSpiderFallback(canvas, x, y, sizeMultiplier)
         }
     }
 
     // ===== ЗАПАСНОЙ ВАРИАНТ ПАУКА =====
-    private fun drawSpiderFallback(canvas: Canvas, x: Float, y: Float) {
+    private fun drawSpiderFallback(canvas: Canvas, x: Float, y: Float, sizeMultiplier: Float = 1f) {
+        val radius = 25f * sizeMultiplier
         paint.color = Color.rgb(100, 150, 50)
-        canvas.drawCircle(x, y, 25f, paint)
+        canvas.drawCircle(x, y, radius, paint)
 
-        // Ножки
         paint.color = Color.rgb(80, 120, 40)
-        paint.strokeWidth = 4f
+        paint.strokeWidth = 4f * sizeMultiplier
         for (i in 0..3) {
             val angle = i * 60f + 30f
-            val endX = x + cos(Math.toRadians(angle.toDouble())).toFloat() * 35f
-            val endY = y + sin(Math.toRadians(angle.toDouble())).toFloat() * 35f
+            val endX = x + cos(Math.toRadians(angle.toDouble())).toFloat() * 35f * sizeMultiplier
+            val endY = y + sin(Math.toRadians(angle.toDouble())).toFloat() * 35f * sizeMultiplier
             canvas.drawLine(x, y, endX, endY, paint)
         }
         for (i in 0..3) {
             val angle = i * 60f + 210f
-            val endX = x + cos(Math.toRadians(angle.toDouble())).toFloat() * 35f
-            val endY = y + sin(Math.toRadians(angle.toDouble())).toFloat() * 35f
+            val endX = x + cos(Math.toRadians(angle.toDouble())).toFloat() * 35f * sizeMultiplier
+            val endY = y + sin(Math.toRadians(angle.toDouble())).toFloat() * 35f * sizeMultiplier
             canvas.drawLine(x, y, endX, endY, paint)
         }
 
         paint.color = Color.WHITE
-        canvas.drawCircle(x - 8f, y - 6f, 6f, paint)
-        canvas.drawCircle(x + 8f, y - 6f, 6f, paint)
+        canvas.drawCircle(x - 8f * sizeMultiplier, y - 6f * sizeMultiplier, 6f * sizeMultiplier, paint)
+        canvas.drawCircle(x + 8f * sizeMultiplier, y - 6f * sizeMultiplier, 6f * sizeMultiplier, paint)
         paint.color = Color.RED
-        canvas.drawCircle(x - 10f, y - 6f, 3f, paint)
-        canvas.drawCircle(x + 6f, y - 6f, 3f, paint)
+        canvas.drawCircle(x - 10f * sizeMultiplier, y - 6f * sizeMultiplier, 3f * sizeMultiplier, paint)
+        canvas.drawCircle(x + 6f * sizeMultiplier, y - 6f * sizeMultiplier, 3f * sizeMultiplier, paint)
     }
 
     // ===== МНОГОГЛАЗ НА КАРТЕ =====
-    private fun drawManyEyesOnMap(canvas: Canvas, x: Float, y: Float, mob: Mob, gameView: GameView?) {
+    private fun drawManyEyesOnMap(canvas: Canvas, x: Float, y: Float, mob: Mob, gameView: GameView?, sizeMultiplier: Float = 1f) {
         if (gameView == null) {
-            drawManyEyesFallback(canvas, x, y)
+            drawManyEyesFallback(canvas, x, y, sizeMultiplier)
             return
         }
 
@@ -190,8 +216,8 @@ object MobRenderer {
             val frameIndex = (System.currentTimeMillis() / 300 % animationFrames.size).toInt()
             val currentFrame = animationFrames[frameIndex]
 
-            val displayWidth = 60f
-            val displayHeight = 60f
+            val displayWidth = 60f * sizeMultiplier
+            val displayHeight = 60f * sizeMultiplier
 
             val dstRect = RectF(
                 x - displayWidth / 2,
@@ -204,19 +230,19 @@ object MobRenderer {
             if (spriteSheet != null) {
                 canvas.drawBitmap(spriteSheet, currentFrame, dstRect, null)
             } else {
-                drawManyEyesFallback(canvas, x, y)
+                drawManyEyesFallback(canvas, x, y, sizeMultiplier)
             }
         } else {
-            drawManyEyesFallback(canvas, x, y)
+            drawManyEyesFallback(canvas, x, y, sizeMultiplier)
         }
     }
 
     // ===== ЗАПАСНОЙ ВАРИАНТ МНОГОГЛАЗА =====
-    private fun drawManyEyesFallback(canvas: Canvas, x: Float, y: Float) {
+    private fun drawManyEyesFallback(canvas: Canvas, x: Float, y: Float, sizeMultiplier: Float = 1f) {
+        val radius = 25f * sizeMultiplier
         paint.color = Color.rgb(150, 50, 200)
-        canvas.drawCircle(x, y, 25f, paint)
+        canvas.drawCircle(x, y, radius, paint)
 
-        // Много глаз
         val eyePositions = listOf(
             -10f to -10f, 10f to -10f,
             -15f to 0f, 15f to 0f,
@@ -225,33 +251,190 @@ object MobRenderer {
         )
         for ((ex, ey) in eyePositions) {
             paint.color = Color.WHITE
-            canvas.drawCircle(x + ex, y + ey, 6f, paint)
+            canvas.drawCircle(x + ex * sizeMultiplier, y + ey * sizeMultiplier, 6f * sizeMultiplier, paint)
             paint.color = Color.RED
-            canvas.drawCircle(x + ex + 2f, y + ey + 1f, 3f, paint)
+            canvas.drawCircle(x + (ex + 2f) * sizeMultiplier, y + (ey + 1f) * sizeMultiplier, 3f * sizeMultiplier, paint)
         }
     }
 
-    private fun drawHPBar(canvas: Canvas, x: Float, y: Float, mob: Mob) {
+    // ============================================================
+    // 🔴 КРАСНЫЙ РЫЦАРЬ (ТИП 3) — НОВЫЙ
+    // ============================================================
+    private fun drawRedKnightOnMap(canvas: Canvas, x: Float, y: Float, mob: Mob, gameView: GameView?, sizeMultiplier: Float = 1f) {
+        if (gameView == null) {
+            drawFallbackRedKnight(canvas, x, y, sizeMultiplier)
+            return
+        }
+
+        val animationFrames = gameView.getMobAnimationFrames("red_knight", "idle")
+        if (animationFrames.isNotEmpty()) {
+            val frameIndex = (System.currentTimeMillis() / 300 % animationFrames.size).toInt()
+            val currentFrame = animationFrames[frameIndex]
+            val displayWidth = 60f * sizeMultiplier
+            val displayHeight = 60f * sizeMultiplier
+            val dstRect = RectF(x - displayWidth / 2, y - displayHeight / 2, x + displayWidth / 2, y + displayHeight / 2)
+            val spriteSheet = gameView.getMobSpriteSheet("red_knight")
+            if (spriteSheet != null) {
+                canvas.drawBitmap(spriteSheet, currentFrame, dstRect, null)
+            } else {
+                drawFallbackRedKnight(canvas, x, y, sizeMultiplier)
+            }
+        } else {
+            drawFallbackRedKnight(canvas, x, y, sizeMultiplier)
+        }
+    }
+
+    private fun drawFallbackRedKnight(canvas: Canvas, x: Float, y: Float, sizeMultiplier: Float = 1f) {
+        val radius = 25f * sizeMultiplier
+        paint.color = Color.rgb(200, 50, 50)
+        canvas.drawCircle(x, y, radius, paint)
+        paint.color = Color.WHITE
+        canvas.drawCircle(x - 8f * sizeMultiplier, y - 6f * sizeMultiplier, 6f * sizeMultiplier, paint)
+        canvas.drawCircle(x + 8f * sizeMultiplier, y - 6f * sizeMultiplier, 6f * sizeMultiplier, paint)
+        paint.color = Color.BLACK
+        canvas.drawCircle(x - 10f * sizeMultiplier, y - 6f * sizeMultiplier, 3f * sizeMultiplier, paint)
+        canvas.drawCircle(x + 6f * sizeMultiplier, y - 6f * sizeMultiplier, 3f * sizeMultiplier, paint)
+    }
+
+    // ============================================================
+    // 🟢 ЗЕЛЁНЫЙ СЛИЗЕНЬ (ТИП 4) — НОВЫЙ
+    // ============================================================
+    private fun drawSlimeGreenOnMap(canvas: Canvas, x: Float, y: Float, mob: Mob, gameView: GameView?, sizeMultiplier: Float = 1f) {
+        if (gameView == null) {
+            drawFallbackSlimeGreen(canvas, x, y, sizeMultiplier)
+            return
+        }
+
+        val animationFrames = gameView.getMobAnimationFrames("slime_green", "idle")
+        if (animationFrames.isNotEmpty()) {
+            val frameIndex = (System.currentTimeMillis() / 300 % animationFrames.size).toInt()
+            val currentFrame = animationFrames[frameIndex]
+            val displayWidth = 60f * sizeMultiplier
+            val displayHeight = 60f * sizeMultiplier
+            val dstRect = RectF(x - displayWidth / 2, y - displayHeight / 2, x + displayWidth / 2, y + displayHeight / 2)
+            val spriteSheet = gameView.getMobSpriteSheet("slime_green")
+            if (spriteSheet != null) {
+                canvas.drawBitmap(spriteSheet, currentFrame, dstRect, null)
+            } else {
+                drawFallbackSlimeGreen(canvas, x, y, sizeMultiplier)
+            }
+        } else {
+            drawFallbackSlimeGreen(canvas, x, y, sizeMultiplier)
+        }
+    }
+
+    private fun drawFallbackSlimeGreen(canvas: Canvas, x: Float, y: Float, sizeMultiplier: Float = 1f) {
+        val radius = 25f * sizeMultiplier
+        paint.color = Color.rgb(100, 200, 100)
+        canvas.drawCircle(x, y, radius, paint)
+        paint.color = Color.WHITE
+        canvas.drawCircle(x - 8f * sizeMultiplier, y - 6f * sizeMultiplier, 6f * sizeMultiplier, paint)
+        canvas.drawCircle(x + 8f * sizeMultiplier, y - 6f * sizeMultiplier, 6f * sizeMultiplier, paint)
+        paint.color = Color.BLACK
+        canvas.drawCircle(x - 10f * sizeMultiplier, y - 6f * sizeMultiplier, 3f * sizeMultiplier, paint)
+        canvas.drawCircle(x + 6f * sizeMultiplier, y - 6f * sizeMultiplier, 3f * sizeMultiplier, paint)
+        paint.color = Color.BLACK
+        paint.strokeWidth = 2f * sizeMultiplier
+        paint.style = Paint.Style.STROKE
+        canvas.drawArc(x - 8f * sizeMultiplier, y + 4f * sizeMultiplier, x + 8f * sizeMultiplier, y + 12f * sizeMultiplier, 0f, 180f, false, paint)
+    }
+
+    // ============================================================
+    // ⚪ СТАЛЬНОЙ РЫЦАРЬ (ТИП 5) — НОВЫЙ
+    // ============================================================
+    private fun drawSteelKnightOnMap(canvas: Canvas, x: Float, y: Float, mob: Mob, gameView: GameView?, sizeMultiplier: Float = 1f) {
+        if (gameView == null) {
+            drawFallbackSteelKnight(canvas, x, y, sizeMultiplier)
+            return
+        }
+
+        val animationFrames = gameView.getMobAnimationFrames("steel_knight", "idle")
+        if (animationFrames.isNotEmpty()) {
+            val frameIndex = (System.currentTimeMillis() / 300 % animationFrames.size).toInt()
+            val currentFrame = animationFrames[frameIndex]
+            val displayWidth = 60f * sizeMultiplier
+            val displayHeight = 60f * sizeMultiplier
+            val dstRect = RectF(x - displayWidth / 2, y - displayHeight / 2, x + displayWidth / 2, y + displayHeight / 2)
+            val spriteSheet = gameView.getMobSpriteSheet("steel_knight")
+            if (spriteSheet != null) {
+                canvas.drawBitmap(spriteSheet, currentFrame, dstRect, null)
+            } else {
+                drawFallbackSteelKnight(canvas, x, y, sizeMultiplier)
+            }
+        } else {
+            drawFallbackSteelKnight(canvas, x, y, sizeMultiplier)
+        }
+    }
+
+    private fun drawFallbackSteelKnight(canvas: Canvas, x: Float, y: Float, sizeMultiplier: Float = 1f) {
+        val radius = 25f * sizeMultiplier
+        paint.color = Color.rgb(150, 150, 200)
+        canvas.drawCircle(x, y, radius, paint)
+        paint.color = Color.WHITE
+        canvas.drawCircle(x - 8f * sizeMultiplier, y - 6f * sizeMultiplier, 6f * sizeMultiplier, paint)
+        canvas.drawCircle(x + 8f * sizeMultiplier, y - 6f * sizeMultiplier, 6f * sizeMultiplier, paint)
+        paint.color = Color.BLACK
+        canvas.drawCircle(x - 10f * sizeMultiplier, y - 6f * sizeMultiplier, 3f * sizeMultiplier, paint)
+        canvas.drawCircle(x + 6f * sizeMultiplier, y - 6f * sizeMultiplier, 3f * sizeMultiplier, paint)
+    }
+
+    // ===== ГОБЛИН НА КАРТЕ =====
+    private fun drawGoblinOnMap(canvas: Canvas, x: Float, y: Float, mob: Mob, gameView: GameView?, sizeMultiplier: Float = 1f) {
+        if (gameView == null) {
+            drawFallbackGoblin(canvas, x, y, sizeMultiplier)
+            return
+        }
+
+        val animName = if (mob.isBoss) "idle" else "idle"
+        val animationFrames = gameView.getMobAnimationFrames("goblin", "idle")
+
+        if (animationFrames.isNotEmpty()) {
+            val frameIndex = (System.currentTimeMillis() / 300 % animationFrames.size).toInt()
+            val currentFrame = animationFrames[frameIndex]
+            val displayWidth = 60f * sizeMultiplier
+            val displayHeight = 60f * sizeMultiplier
+            val dstRect = RectF(x - displayWidth / 2, y - displayHeight / 2, x + displayWidth / 2, y + displayHeight / 2)
+            val spriteSheet = gameView.getMobSpriteSheet("goblin")
+            if (spriteSheet != null) {
+                canvas.drawBitmap(spriteSheet, currentFrame, dstRect, null)
+            } else {
+                drawFallbackGoblin(canvas, x, y, sizeMultiplier)
+            }
+        } else {
+            drawFallbackGoblin(canvas, x, y, sizeMultiplier)
+        }
+    }
+
+    private fun drawFallbackGoblin(canvas: Canvas, x: Float, y: Float, sizeMultiplier: Float = 1f) {
+        val radius = 25f * sizeMultiplier
+        paint.color = Color.rgb(50, 180, 50)
+        canvas.drawCircle(x, y, radius, paint)
+        paint.color = Color.WHITE
+        canvas.drawCircle(x - 8f * sizeMultiplier, y - 6f * sizeMultiplier, 6f * sizeMultiplier, paint)
+        canvas.drawCircle(x + 8f * sizeMultiplier, y - 6f * sizeMultiplier, 6f * sizeMultiplier, paint)
+        paint.color = Color.BLACK
+        canvas.drawCircle(x - 10f * sizeMultiplier, y - 6f * sizeMultiplier, 3f * sizeMultiplier, paint)
+        canvas.drawCircle(x + 6f * sizeMultiplier, y - 6f * sizeMultiplier, 3f * sizeMultiplier, paint)
+    }
+
+    // ===== HP BAR (УВЕЛИЧЕННЫЙ ДЛЯ БОССА) =====
+    private fun drawHPBar(canvas: Canvas, x: Float, y: Float, mob: Mob, sizeMultiplier: Float = 1f) {
         val hpPercent = mob.hp / mob.maxHp
+        val barWidth = 60f * sizeMultiplier
+        val barHeight = 12f * sizeMultiplier
         val hpPaint = Paint().apply { color = Color.argb(180, 0, 0, 0) }
-        canvas.drawRect(x - 32f, y - 47f, x + 32f, y - 35f, hpPaint)
+        canvas.drawRect(x - barWidth / 2 - 2f, y - 47f * sizeMultiplier - 2f, x + barWidth / 2 + 2f, y - 35f * sizeMultiplier + 2f, hpPaint)
         hpPaint.color = when {
+            mob.isBoss -> Color.rgb(255, 215, 0)  // Босс — золотой HP бар
             hpPercent > 0.5f -> Color.GREEN
             hpPercent > 0.25f -> Color.YELLOW
             else -> Color.RED
         }
-        canvas.drawRect(x - 30f, y - 45f, x - 30f + 60f * hpPercent, y - 37f, hpPaint)
-
-        val typePaint = Paint().apply {
-            color = Color.WHITE
-            textSize = 12f
-            textAlign = Paint.Align.CENTER
-        }
-        canvas.drawText(mob.getTypeName(), x, y + 50f, typePaint)
+        canvas.drawRect(x - barWidth / 2, y - 47f * sizeMultiplier, x - barWidth / 2 + barWidth * hpPercent, y - 35f * sizeMultiplier, hpPaint)
     }
 
     // ===== ДЕФОЛТНЫЙ МОБ =====
-    private fun drawDefault(canvas: Canvas, x: Float, y: Float) {
+    private fun drawDefault(canvas: Canvas, x: Float, y: Float, sizeMultiplier: Float = 1f) {
         paint.color = Color.GRAY
         canvas.drawCircle(x, y, 25f, paint)
 

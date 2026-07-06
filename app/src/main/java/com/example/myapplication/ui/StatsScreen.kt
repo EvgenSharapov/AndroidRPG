@@ -27,6 +27,66 @@ class StatsScreen {
         }
         canvas.drawRect(0f, 0f, width, height, bgPaint)
 
+        // ⭐ ЗОЛОТО (СЛЕВА СВЕРХУ)
+        val goldPaint = Paint().apply {
+            color = Color.rgb(255, 215, 0)
+            textSize = 32f
+            textAlign = Paint.Align.LEFT
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        canvas.drawText("💰 ${player.gold}", 30f, 75f, goldPaint)
+
+        // ⭐ КНОПКА ЗАКРЫТИЯ (КРЕСТИК СПРАВА СВЕРХУ)
+        val closeBtnSize = 60f
+        val closeX = width - 40f
+        val closeY = 45f
+        val halfSize = closeBtnSize / 2
+
+        // Фон кнопки (круг)
+        val closeBgPaint = Paint().apply {
+            color = Color.rgb(200, 50, 50)
+            style = Paint.Style.FILL
+        }
+        canvas.drawCircle(closeX, closeY, halfSize + 10f, closeBgPaint)
+
+        // Свечение кнопки
+        val glowPaint = Paint().apply {
+            shader = RadialGradient(
+                closeX, closeY, halfSize + 30f,
+                Color.argb(60, 255, 100, 100),
+                Color.TRANSPARENT,
+                Shader.TileMode.CLAMP
+            )
+        }
+        canvas.drawCircle(closeX, closeY, halfSize + 30f, glowPaint)
+
+        // Крестик (X)
+        val crossPaint = Paint().apply {
+            color = Color.WHITE
+            strokeWidth = 8f
+            style = Paint.Style.STROKE
+            strokeCap = Paint.Cap.ROUND
+        }
+        val crossSize = halfSize * 0.6f
+        canvas.drawLine(
+            closeX - crossSize, closeY - crossSize,
+            closeX + crossSize, closeY + crossSize,
+            crossPaint
+        )
+        canvas.drawLine(
+            closeX + crossSize, closeY - crossSize,
+            closeX - crossSize, closeY + crossSize,
+            crossPaint
+        )
+
+        // Рамка кнопки
+        val borderPaint = Paint().apply {
+            color = Color.argb(80, 255, 255, 255)
+            style = Paint.Style.STROKE
+            strokeWidth = 2f
+        }
+        canvas.drawCircle(closeX, closeY, halfSize + 10f, borderPaint)
+
         // --- ЗАГОЛОВОК ---
         val titlePaint = Paint().apply {
             color = Color.WHITE
@@ -149,23 +209,6 @@ class StatsScreen {
             }
             canvas.drawText(stat.third, 50f, y + 65f, descPaint)
         }
-
-        // --- КНОПКА ЗАКРЫТЬ ---
-        val closeBtnPaint = Paint().apply {
-            color = Color.rgb(200, 50, 50)
-        }
-        canvas.drawRoundRect(
-            RectF(width / 2 - 80f, height - 80f, width / 2 + 80f, height - 30f),
-            15f, 15f, closeBtnPaint
-        )
-
-        val closeText = Paint().apply {
-            color = Color.WHITE
-            textSize = 24f
-            textAlign = Paint.Align.CENTER
-            typeface = Typeface.DEFAULT_BOLD
-        }
-        canvas.drawText("✖ Закрыть", width / 2, height - 42f, closeText)
     }
 
     // Обработка касаний на экране характеристик
@@ -178,9 +221,13 @@ class StatsScreen {
         onUpgrade: (Player.StatType) -> Unit,
         onClose: () -> Unit
     ): Boolean {
-        // Проверяем кнопку "Закрыть"
-        if (x > width / 2 - 80f && x < width / 2 + 80f &&
-            y > height - 80f && y < height - 30f) {
+        // ⭐ КНОПКА ЗАКРЫТИЯ (КРЕСТИК СПРАВА СВЕРХУ)
+        val closeX = width - 40f
+        val closeY = 45f
+        val halfSize = 40f
+
+        if (x > closeX - halfSize && x < closeX + halfSize &&
+            y > closeY - halfSize && y < closeY + halfSize) {
             onClose()
             return true
         }

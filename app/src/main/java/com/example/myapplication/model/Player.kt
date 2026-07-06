@@ -14,6 +14,7 @@ data class Player(
     var exp: Int = 0,
     var maxExp: Int = 50,
     var skillPoints: Int = 0,
+    var gold: Int = 0,
 
     // ===== ХАРАКТЕРИСТИКИ =====
     var strength: Int = 5,

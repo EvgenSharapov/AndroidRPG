@@ -61,11 +61,31 @@ object MapRenderer {
         paint.textSize = 18f
         canvas.drawText("🏜️ Пустошь", wasteX, wasteY + 10f, paint)
 
+        // 4. ⭐ СКАЛЫ (слева от Леса)
+        val rocksX = centerX - 400f * mapScale
+        val rocksY = centerY - 200f * mapScale
+        paint.color = Color.rgb(100, 100, 120)
+        canvas.drawCircle(rocksX, rocksY, 70f * mapScale, paint)
+        paint.color = Color.WHITE
+        paint.textSize = 18f
+        canvas.drawText("⛰️ Скалы", rocksX, rocksY + 10f, paint)
+
+        // 5. ⭐ ЗАМОК (дальше слева от Скал)
+        val castleX = centerX - 550f * mapScale
+        val castleY = centerY - 300f * mapScale
+        paint.color = Color.rgb(80, 80, 100)
+        canvas.drawCircle(castleX, castleY, 70f * mapScale, paint)
+        paint.color = Color.WHITE
+        paint.textSize = 18f
+        canvas.drawText("🏰 Замок", castleX, castleY + 10f, paint)
+
         // ===== ПОДСВЕТКА ТЕКУЩЕЙ ЛОКАЦИИ =====
         val currentPos = when (locationManager.currentLocation) {
             LocationManager.Location.CITY -> cityX to cityY
             LocationManager.Location.FOREST -> forestX to forestY
             LocationManager.Location.WASTELAND -> wasteX to wasteY
+            LocationManager.Location.ROCKS -> rocksX to rocksY
+            LocationManager.Location.CASTLE -> castleX to castleY
         }
         val markerPaint = Paint().apply {
             color = Color.YELLOW
@@ -112,6 +132,24 @@ object MapRenderer {
             10f, 10f, btnPaint
         )
         canvas.drawText("🏜️ Пустошь", wasteBtnX + 100f, wasteBtnY + 35f, btnTextPaint)
+
+        // ⭐ Кнопка "Скалы"
+        val rocksBtnX = centerX - 400f * mapScale - 100f
+        val rocksBtnY = centerY + 150f
+        canvas.drawRoundRect(
+            RectF(rocksBtnX, rocksBtnY, rocksBtnX + 200f, rocksBtnY + 50f),
+            10f, 10f, btnPaint
+        )
+        canvas.drawText("⛰️ Скалы", rocksBtnX + 100f, rocksBtnY + 35f, btnTextPaint)
+
+        // ⭐ Кнопка "Замок"
+        val castleBtnX = centerX - 550f * mapScale - 100f
+        val castleBtnY = centerY + 150f
+        canvas.drawRoundRect(
+            RectF(castleBtnX, castleBtnY, castleBtnX + 200f, castleBtnY + 50f),
+            10f, 10f, btnPaint
+        )
+        canvas.drawText("🏰 Замок", castleBtnX + 100f, castleBtnY + 35f, btnTextPaint)
 
         // ===== ПОДПИСЬ =====
         val hintPaint = Paint().apply {
@@ -176,6 +214,24 @@ object MapRenderer {
         if (x > wasteBtnX && x < wasteBtnX + 200f &&
             y > wasteBtnY && y < wasteBtnY + 50f) {
             onTeleport(LocationManager.Location.WASTELAND)
+            return true
+        }
+
+        // Кнопка "Скалы"
+        val rocksBtnX = centerX - 400f * mapScale - 100f
+        val rocksBtnY = centerY + 150f
+        if (x > rocksBtnX && x < rocksBtnX + 200f &&
+            y > rocksBtnY && y < rocksBtnY + 50f) {
+            onTeleport(LocationManager.Location.ROCKS)
+            return true
+        }
+
+        // ⭐ Кнопка "Замок"
+        val castleBtnX = centerX - 550f * mapScale - 100f
+        val castleBtnY = centerY + 150f
+        if (x > castleBtnX && x < castleBtnX + 200f &&
+            y > castleBtnY && y < castleBtnY + 50f) {
+            onTeleport(LocationManager.Location.CASTLE)
             return true
         }
 
