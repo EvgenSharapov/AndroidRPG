@@ -28,6 +28,12 @@ class BattleManager {
     fun startBattle(player: Player, mob: Mob, inventory: Inventory) {
         this.player = player
         this.currentMob = mob
+
+        if (mob.isBoss) {
+            mob.hp = mob.maxHp
+            println("👑 Босс готов к бою: HP ${mob.hp}/${mob.maxHp}")
+        }
+
         state = BattleState.STARTED
         turnTimer = 0
         isProcessing = false
@@ -49,7 +55,6 @@ class BattleManager {
                     if (currentMob?.type == 0) {
                         BattleRenderer.triggerFluffyAttack()
                     } else {
-                        // ⭐ ПЕРЕДАЁМ ТИП МОБА ДЛЯ АНИМАЦИИ АТАКИ
                         BattleRenderer.triggerMobAttack(currentMob?.type ?: -1)
                     }
 
@@ -69,14 +74,24 @@ class BattleManager {
                         if (player!!.hp < 0) player!!.hp = 0f
 
                         BattleRenderer.triggerHitEffect(player!!.x, player!!.y)
-                        BattleRenderer.showDamageNumber(
-                            player!!.x, player!!.y - 50f,
-                            "-${damage.toInt()}", Color.RED
+
+                        // ⭐ УРОН ПО ИГРОКУ (ЭКРАННЫЕ КООРДИНАТЫ)
+                        BattleRenderer.showBattleDamageNumber(
+                            "player",
+                            "-${damage.toInt()}",
+                            Color.RED,
+                            -100f
                         )
 
                         if (player!!.hp <= 0) {
                             player!!.hp = 0f
                             state = BattleState.DEFEAT
+
+                            if (mob.isBoss) {
+                                mob.hp = mob.maxHp
+                                println("👑 Босс восстановил HP (смерть игрока): ${mob.hp}/${mob.maxHp}")
+                            }
+
                             mainHandler.postDelayed({
                                 onBattleEnd?.invoke(false)
                             }, 2000)
@@ -96,9 +111,7 @@ class BattleManager {
                     }, 2000)
                 }
             }
-            BattleState.DEFEAT -> {
-                // Уже обработано выше
-            }
+            BattleState.DEFEAT -> {}
             else -> {}
         }
     }
@@ -124,13 +137,24 @@ class BattleManager {
         mob.hp -= damage
         if (mob.hp < 0) mob.hp = 0f
 
+        // ⭐ УРОН ПО МОБУ (ЭКРАННЫЕ КООРДИНАТЫ)
         if (mob.isBoss) {
             BattleRenderer.triggerHitEffect(mob.x, mob.y)
-            BattleRenderer.showDamageNumber(mob.x, mob.y - 70f, "-${damage.toInt()} 💥", Color.rgb(255, 200, 100))
+            BattleRenderer.showBattleDamageNumber(
+                "mob",
+                "-${damage.toInt()} 💥",
+                Color.rgb(255, 200, 100),
+                -120f
+            )
             BattleRenderer.knockbackMob(20f, -10f)
         } else {
             BattleRenderer.triggerHitEffect(mob.x, mob.y)
-            BattleRenderer.showDamageNumber(mob.x, mob.y - 50f, "-${damage.toInt()}", Color.YELLOW)
+            BattleRenderer.showBattleDamageNumber(
+                "mob",
+                "-${damage.toInt()}",
+                Color.YELLOW,
+                -100f
+            )
             BattleRenderer.knockbackMob(40f, -15f)
         }
 
@@ -144,11 +168,13 @@ class BattleManager {
 
                 if (gold > 0) {
                     player?.gold = (player?.gold ?: 0) + gold
-                    val goldColor = if (mob.isBoss) Color.rgb(255, 215, 0) else Color.rgb(255, 215, 0)
-                    BattleRenderer.showDamageNumber(
-                        mob.x, mob.y - 130f,
+
+                    // ⭐ ЗОЛОТО (ЭКРАННЫЕ КООРДИНАТЫ)
+                    BattleRenderer.showBattleDamageNumber(
+                        "mob",
                         if (mob.isBoss) "💰 +${gold} золота! (БОСС)" else "💰 +${gold} золота!",
-                        goldColor
+                        Color.rgb(255, 215, 0),
+                        -180f
                     )
                     println("💰 Добавлено $gold золота! Всего: ${player?.gold}")
                 }
@@ -175,10 +201,12 @@ class BattleManager {
                 player?.exp = (player?.exp ?: 0) + expReward
                 println("✅ Добавлено $expReward опыта! Моб уровня ${mob.level}, игрок уровня ${playerLevel}")
 
-                BattleRenderer.showDamageNumber(
-                    mob.x, mob.y - 100f,
+                // ⭐ ОПЫТ (ЭКРАННЫЕ КООРДИНАТЫ)
+                BattleRenderer.showBattleDamageNumber(
+                    "mob",
                     if (mob.isBoss) "👑 +${expReward} EXP! (БОСС)" else "+${expReward} EXP 💫",
-                    if (mob.isBoss) Color.rgb(255, 215, 0) else Color.rgb(100, 200, 255)
+                    if (mob.isBoss) Color.rgb(255, 215, 0) else Color.rgb(100, 200, 255),
+                    -150f
                 )
             } else {
                 state = BattleState.ENEMY_TURN

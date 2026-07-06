@@ -37,7 +37,7 @@
     "walk_right_8": { "frame": { "x": 512, "y": 704, "w": 64, "h": 64 } }
   },
   "meta": {
-    "image": "ork.png",
+    "image": "lizard.png",
     "size": { "w": 1152, "h": 4224 },
     "frameCount": 41
   }

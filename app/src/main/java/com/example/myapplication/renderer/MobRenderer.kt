@@ -474,7 +474,7 @@ object MobRenderer {
             return
         }
 
-        val animationFrames = gameView.getMobAnimationFrames("ork", "idle")
+        val animationFrames = gameView.getMobAnimationFrames("lizard", "idle")
 
         if (animationFrames.isNotEmpty()) {
             val frameIndex = (System.currentTimeMillis() / 300 % animationFrames.size).toInt()
@@ -489,7 +489,7 @@ object MobRenderer {
                 y + displayHeight / 2
             )
 
-            val spriteSheet = gameView.getMobSpriteSheet("ork")
+            val spriteSheet = gameView.getMobSpriteSheet("lizard")
             if (spriteSheet != null) {
                 canvas.drawBitmap(spriteSheet, currentFrame, dstRect, null)
             } else {

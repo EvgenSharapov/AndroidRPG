@@ -15,6 +15,7 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
+import android.graphics.Color
 
 class GameView(context: Context) : SurfaceView(context), Runnable {
 
@@ -45,6 +46,12 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
     private var lastTouchY = 0f
 
     private var bossOnMap = false
+
+    // ⭐ МЕНЮ
+    private var isMenuOpen = false
+    private val menuButtonSize = 100f
+    private val menuItemSize = 200f
+    private val menuItemSpacing = 20f
 
     private lateinit var spriteManager: SpriteManager
 
@@ -383,20 +390,24 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
         battleManager.playerAttack()
 
         if (battleManager.state == BattleManager.BattleState.VICTORY) {
-            println("🏆 Победа! Опыт до проверки: ${player.exp}/${player.maxExp}")
-            showMessage("💥 Победа! +20 опыта")
             android.os.Handler().postDelayed({
                 battleManager.endBattle()
                 gameState = GameState.GAME
                 isAttackingInBattle = false
-                println("🔍 Проверяем уровень после победы...")
                 checkLevelUp()
                 saveGame()
             }, 1500)
         } else if (battleManager.state == BattleManager.BattleState.DEFEAT) {
-            println("💀 Поражение!")
             showMessage("💀 Вы погибли...")
+
+            val boss = battleManager.currentMob
+
             android.os.Handler().postDelayed({
+                if (boss != null && boss.isBoss) {
+                    boss.hp = boss.maxHp
+                    showMessage("👑 Босс восстановил все HP!")
+                }
+
                 battleManager.endBattle()
                 gameState = GameState.GAME
                 player.hp = player.calculateMaxHp()
@@ -688,72 +699,69 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
         }
         canvas.drawText("📍 ${locationData.name}", screenWidth / 2, 50f, locPaint)
 
-        val btnWidth = 180f
-        val btnHeight = 60f
-        val btnRight = screenWidth - 20f
-        val btnLeft = btnRight - btnWidth
+        // ⭐ ===== НОВАЯ КНОПКА МЕНЮ (СПРАВА СВЕРХУ) =====
+        val menuX = screenWidth - menuButtonSize - 20f
+        val menuY = 20f
 
-        // ----- КНОПКА "КАРТА" -----
-        val mapBtnPaint = Paint().apply {
-            color = Color.rgb(50, 100, 200)
-            style = Paint.Style.FILL
+        // Тень кнопки
+        val shadowPaint = Paint().apply {
+            color = Color.argb(60, 0, 0, 0)
         }
-        canvas.drawRect(btnLeft, 20f, btnRight, 20f + btnHeight, mapBtnPaint)
-        val mapTextPaint = Paint().apply {
+        canvas.drawCircle(menuX + 3f, menuY + 3f, menuButtonSize / 2, shadowPaint)
+
+        // Градиент кнопки меню
+        val menuBtnPaint = Paint().apply {
+            shader = LinearGradient(
+                menuX, menuY,
+                menuX + menuButtonSize, menuY + menuButtonSize,
+                Color.rgb(255, 180, 50),
+                Color.rgb(200, 100, 20),
+                Shader.TileMode.CLAMP
+            )
+        }
+        canvas.drawCircle(menuX + menuButtonSize / 2, menuY + menuButtonSize / 2, menuButtonSize / 2, menuBtnPaint)
+
+        // Рамка кнопки
+        val borderPaint = Paint().apply {
+            color = Color.argb(150, 255, 255, 200)
+            style = Paint.Style.STROKE
+            strokeWidth = 3f
+        }
+        canvas.drawCircle(menuX + menuButtonSize / 2, menuY + menuButtonSize / 2, menuButtonSize / 2, borderPaint)
+
+        // Свечение
+        val glowPaint = Paint().apply {
+            shader = RadialGradient(
+                menuX + menuButtonSize / 2, menuY + menuButtonSize / 2, menuButtonSize,
+                Color.argb(80, 255, 200, 100),
+                Color.TRANSPARENT,
+                Shader.TileMode.CLAMP
+            )
+        }
+        canvas.drawCircle(menuX + menuButtonSize / 2, menuY + menuButtonSize / 2, menuButtonSize, glowPaint)
+
+        // Иконка "☰" (три полоски)
+        val iconPaint = Paint().apply {
             color = Color.WHITE
-            textSize = 22f
+            textSize = 40f
             textAlign = Paint.Align.CENTER
             typeface = Typeface.DEFAULT_BOLD
         }
-        canvas.drawText("🗺️ Карта", btnLeft + btnWidth / 2, 20f + btnHeight / 2 + 8f, mapTextPaint)
+        canvas.drawText("☰", menuX + menuButtonSize / 2, menuY + menuButtonSize / 2 + 14f, iconPaint)
 
-        // ----- КНОПКА "ХАРАКТЕРИСТИКИ" -----
-        val statsBtnPaint = Paint().apply {
-            color = Color.rgb(200, 150, 50)
-            style = Paint.Style.FILL
-        }
-        canvas.drawRect(btnLeft, 20f + btnHeight + 10f, btnRight, 20f + btnHeight * 2 + 10f, statsBtnPaint)
-        val statsTextPaint = Paint().apply {
-            color = Color.WHITE
-            textSize = 20f
-            textAlign = Paint.Align.CENTER
-            typeface = Typeface.DEFAULT_BOLD
-        }
-        canvas.drawText("📊 Хар-ки", btnLeft + btnWidth / 2, 20f + btnHeight * 1.5f + 10f + 8f, statsTextPaint)
-
-        // Индикатор очков прокачки
-        if (player.skillPoints > 0) {
-            val pointsPaint = Paint().apply {
-                color = Color.YELLOW
-                textSize = 16f
-                textAlign = Paint.Align.CENTER
-                typeface = Typeface.DEFAULT_BOLD
-            }
-            canvas.drawText("+${player.skillPoints}", btnLeft + btnWidth / 2, 20f + btnHeight + 10f - 8f, pointsPaint)
+        // ⭐ ===== ВСПЛЫВАЮЩЕЕ МЕНЮ =====
+        if (isMenuOpen) {
+            drawPopupMenu(canvas)
         }
 
-        // ----- КНОПКА "ИНВЕНТАРЬ" -----
-        val invBtnPaint = Paint().apply {
-            color = Color.rgb(100, 150, 200)
-            style = Paint.Style.FILL
-        }
-        canvas.drawRect(btnLeft, 20f + btnHeight * 2 + 20f, btnRight, 20f + btnHeight * 3 + 20f, invBtnPaint)
-        val invTextPaint = Paint().apply {
-            color = Color.WHITE
-            textSize = 20f
-            textAlign = Paint.Align.CENTER
-            typeface = Typeface.DEFAULT_BOLD
-        }
-        canvas.drawText("🎒 Инвентарь", btnLeft + btnWidth / 2, 20f + btnHeight * 2.5f + 20f + 8f, invTextPaint)
-
-        // ----- СТАТИСТИКА -----
+        // ===== СТАТИСТИКА =====
         // Чёрный фон для читаемости
         val bgStatPaint = Paint().apply {
             color = Color.argb(180, 0, 0, 0)
             style = Paint.Style.FILL
         }
         canvas.drawRoundRect(
-            RectF(10f, 20f, 450f, 160f),  // ← увеличил ширину и высоту
+            RectF(10f, 20f, 450f, 160f),
             15f, 15f, bgStatPaint
         )
 
@@ -768,10 +776,9 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
             15f, 15f, borderStatPaint
         )
 
-        // ⭐ ТЕКСТ — УВЕЛИЧЕН В 3 РАЗА, ЖИРНЫЙ, ЧЁРНЫЙ
         val statPaint = Paint().apply {
-            color = Color.WHITE  // ← белый текст на чёрном фоне
-            textSize = 36f       // ← было 20f, стало 36f (почти в 2 раза)
+            color = Color.WHITE
+            textSize = 36f
             textAlign = Paint.Align.LEFT
             typeface = Typeface.DEFAULT_BOLD
             isAntiAlias = true
@@ -779,20 +786,17 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
 
         val mobCount = locationData.mobs.count { !it.isDead }
 
-        // Строка 1: HP
         canvas.drawText(
             "❤️ HP: ${player.hp.toInt()}/${player.calculateMaxHp().toInt()}",
-            25f, 65f, statPaint  // ← увеличены отступы
+            25f, 65f, statPaint
         )
 
-        // Строка 2: Уровень и опыт
-        statPaint.textSize = 32f  // ← чуть меньше для второй строки
+        statPaint.textSize = 32f
         canvas.drawText(
             "⭐ Ур.${player.level} | Опыт: ${player.exp}/${player.maxExp}",
             25f, 105f, statPaint
         )
 
-        // Строка 3: Мобы и очки
         statPaint.textSize = 28f
         canvas.drawText(
             "👾 Мобы: $mobCount | 🎯 Очки: ${player.skillPoints}",
@@ -828,7 +832,74 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
             val x = event.x
             val y = event.y
 
-            // ЭКРАН ХАРАКТЕРИСТИК
+            // ⭐ ЕСЛИ МЕНЮ ОТКРЫТО — ОБРАБАТЫВАЕМ КЛИКИ ПО МЕНЮ
+            if (isMenuOpen) {
+                val menuWidth = 400f
+                val menuHeight = 350f
+                val menuX = (screenWidth - menuWidth) / 2
+                val menuY = (screenHeight - menuHeight) / 2
+
+                // Кнопка закрытия (крестик)
+                val closeX = menuX + menuWidth - 30f
+                val closeY = menuY + 30f
+                val closeSize = 30f
+                if (x > closeX - closeSize && x < closeX + closeSize &&
+                    y > closeY - closeSize && y < closeY + closeSize) {
+                    isMenuOpen = false
+                    return true
+                }
+
+                // Кнопка "Карта"
+                val btnWidth = menuWidth - 60f
+                val btnHeight = 60f
+                val btnStartX = menuX + 30f
+                val btnStartY = menuY + 90f
+                val btnSpacing = 15f
+
+                // Карта
+                if (x > btnStartX && x < btnStartX + btnWidth &&
+                    y > btnStartY && y < btnStartY + btnHeight) {
+                    isMenuOpen = false
+                    gameState = if (gameState == GameState.MAP) GameState.GAME else GameState.MAP
+                    return true
+                }
+
+                // Характеристики
+                if (x > btnStartX && x < btnStartX + btnWidth &&
+                    y > btnStartY + (btnHeight + btnSpacing) &&
+                    y < btnStartY + (btnHeight + btnSpacing) + btnHeight) {
+                    isMenuOpen = false
+                    openStats()
+                    return true
+                }
+
+                // Инвентарь
+                if (x > btnStartX && x < btnStartX + btnWidth &&
+                    y > btnStartY + (btnHeight + btnSpacing) * 2 &&
+                    y < btnStartY + (btnHeight + btnSpacing) * 2 + btnHeight) {
+                    isMenuOpen = false
+                    openInventory()
+                    return true
+                }
+
+                // Клик вне меню — закрываем
+                if (x < menuX || x > menuX + menuWidth || y < menuY || y > menuY + menuHeight) {
+                    isMenuOpen = false
+                    return true
+                }
+                return true
+            }
+
+            // ⭐ КНОПКА МЕНЮ (СПРАВА СВЕРХУ)
+            val menuX = screenWidth - menuButtonSize - 20f
+            val menuY = 20f
+            if (x > menuX && x < menuX + menuButtonSize &&
+                y > menuY && y < menuY + menuButtonSize) {
+                isMenuOpen = !isMenuOpen
+                return true
+            }
+
+            // ⭐ ЭКРАН ХАРАКТЕРИСТИК
             if (gameState == GameState.STATS) {
                 statsScreen.handleTouch(
                     x, y, screenWidth, screenHeight, player,
@@ -839,7 +910,7 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
                 return true
             }
 
-            // ЭКРАН ИНВЕНТАРЯ
+            // ⭐ ЭКРАН ИНВЕНТАРЯ
             if (gameState == GameState.INVENTORY) {
                 inventoryScreen.handleTouch(
                     x, y, screenWidth, screenHeight, inventory,
@@ -847,30 +918,12 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
                     { slot -> unequipItem(slot) },
                     { closeInventory() },
                     { index -> deleteItem(index) },
-                    { index -> useItem(index) }  // ← ДОБАВЛЯЕМ
+                    { index -> useItem(index) }
                 )
                 return true
             }
 
-            // Кнопка "Карта"
-            if (x > screenWidth - 180f && x < screenWidth - 20f && y > 20f && y < 80f) {
-                gameState = if (gameState == GameState.MAP) GameState.GAME else GameState.MAP
-                return true
-            }
-
-            // Кнопка "Характеристики"
-            if (x > screenWidth - 180f && x < screenWidth - 20f && y > 90f && y < 150f) {
-                openStats()
-                return true
-            }
-
-            // Кнопка "Инвентарь"
-            if (x > screenWidth - 180f && x < screenWidth - 20f && y > 160f && y < 220f) {
-                openInventory()
-                return true
-            }
-
-            // Обработка кликов на карте
+            // ⭐ ОБРАБОТКА КЛИКОВ НА КАРТЕ
             if (gameState == GameState.MAP) {
                 val handled = MapRenderer.handleMapClick(
                     x, y, screenWidth, screenHeight, locationManager
@@ -882,10 +935,15 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
                 return true
             }
 
-            // БОЕВОЙ РЕЖИМ
+            // ⭐ БОЕВОЙ РЕЖИМ
             if (gameState == GameState.BATTLE) {
-                if (x > screenWidth - 180f && x < screenWidth - 30f &&
-                    y > screenHeight - 90f && y < screenHeight - 30f) {
+                val btnWidth = screenWidth * 0.4f
+                val btnHeight = 140f
+                val btnX = (screenWidth - btnWidth) / 2
+                val btnY = screenHeight - btnHeight - 30f
+
+                if (x > btnX && x < btnX + btnWidth &&
+                    y > btnY && y < btnY + btnHeight) {
                     attackInBattle()
                     return true
                 }
@@ -893,10 +951,10 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
             }
 
             // ===== ИГРОВОЙ РЕЖИМ =====
-
             val currentTime = System.currentTimeMillis()
             val timeDiff = currentTime - lastTouchTime
 
+            // Двойной тап — бой с мобом
             if (timeDiff < 500 && abs(x - lastTouchX) < 50 && abs(y - lastTouchY) < 50) {
                 val location = locationManager.getCurrentData()
                 val touchWorldX = x + cameraManager.x
@@ -1146,5 +1204,189 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
         showMessage("🔄 Характеристики сброшены! +${player.skillPoints} очков прокачки!")
         saveGame()
         println("🔄 Сброс характеристик: возвращено ${player.skillPoints} очков")
+    }
+
+    // ⭐ МЕТОД ДЛЯ ОТРИСОВКИ ВСПЛЫВАЮЩЕГО МЕНЮ
+    private fun drawPopupMenu(canvas: Canvas) {
+        // Затемнение фона
+        val dimPaint = Paint().apply {
+            color = Color.argb(150, 0, 0, 0)
+        }
+        canvas.drawRect(0f, 0f, screenWidth, screenHeight, dimPaint)
+
+        // Контейнер меню
+        val menuWidth = 700f
+        val menuHeight = 600f
+        val menuX = (screenWidth - menuWidth) / 2
+        val menuY = (screenHeight - menuHeight) / 2
+
+        // Фон меню с градиентом
+        val menuBgPaint = Paint().apply {
+            shader = LinearGradient(
+                menuX, menuY,
+                menuX, menuY + menuHeight,
+                Color.rgb(40, 30, 50),
+                Color.rgb(20, 15, 30),
+                Shader.TileMode.CLAMP
+            )
+        }
+        canvas.drawRoundRect(
+            RectF(menuX, menuY, menuX + menuWidth, menuY + menuHeight),
+            30f, 30f, menuBgPaint
+        )
+
+        // Рамка меню
+        val borderPaint = Paint().apply {
+            color = Color.argb(150, 255, 215, 0)
+            style = Paint.Style.STROKE
+            strokeWidth = 4f
+        }
+        canvas.drawRoundRect(
+            RectF(menuX, menuY, menuX + menuWidth, menuY + menuHeight),
+            30f, 30f, borderPaint
+        )
+
+        // Заголовок
+        val titlePaint = Paint().apply {
+            color = Color.WHITE
+            textSize = 48f
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        canvas.drawText("📋 МЕНЮ", screenWidth / 2, menuY + 80f, titlePaint)
+
+        // Разделительная линия
+        val linePaint = Paint().apply {
+            color = Color.argb(80, 255, 255, 255)
+            strokeWidth = 3f
+        }
+        canvas.drawLine(menuX + 60f, menuY + 110f, menuX + menuWidth - 60f, menuY + 110f, linePaint)
+
+        // ⭐ КНОПКИ МЕНЮ
+        val btnWidth = menuWidth - 80f
+        val btnHeight = 90f
+        val btnStartX = menuX + 40f
+        val btnStartY = menuY + 140f
+        val btnSpacing = 25f
+
+        // Кнопка "Карта"
+        drawMenuItem(
+            canvas,
+            btnStartX, btnStartY,
+            btnWidth, btnHeight,
+            "🗺️ Карта",
+            Color.rgb(50, 150, 200)
+        )
+
+        // Кнопка "Характеристики"
+        drawMenuItem(
+            canvas,
+            btnStartX, btnStartY + (btnHeight + btnSpacing),
+            btnWidth, btnHeight,
+            "📊 Характеристики",
+            Color.rgb(200, 150, 50)
+        )
+
+        // Кнопка "Инвентарь"
+        drawMenuItem(
+            canvas,
+            btnStartX, btnStartY + (btnHeight + btnSpacing) * 2,
+            btnWidth, btnHeight,
+            "🎒 Инвентарь",
+            Color.rgb(100, 150, 200)
+        )
+
+        // Кнопка закрытия (крестик)
+        val closeX = menuX + menuWidth - 45f
+        val closeY = menuY + 45f
+        val closeSize = 45f
+
+        val closeBgPaint = Paint().apply {
+            color = Color.rgb(200, 50, 50)
+        }
+        canvas.drawCircle(closeX, closeY, closeSize, closeBgPaint)
+
+        val closeIconPaint = Paint().apply {
+            color = Color.WHITE
+            textSize = 40f
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        canvas.drawText("✕", closeX, closeY + 14f, closeIconPaint)
+    }
+
+    // ⭐ МЕТОД ДЛЯ ОТРИСОВКИ ОДНОГО ПУНКТА МЕНЮ
+    private fun drawMenuItem(
+        canvas: Canvas,
+        x: Float,
+        y: Float,
+        width: Float,
+        height: Float,
+        text: String,
+        btnColor: Int
+    ) {
+        // Извлекаем компоненты цвета в локальные переменные
+        val red = Color.red(btnColor)
+        val green = Color.green(btnColor)
+        val blue = Color.blue(btnColor)
+
+        // Тень
+        val shadowPaint = Paint().apply {
+            color = Color.argb(60, 0, 0, 0)
+        }
+        canvas.drawRoundRect(
+            RectF(x + 4f, y + 4f, x + width + 4f, y + height + 4f),
+            15f, 15f, shadowPaint
+        )
+
+        // Фон кнопки с градиентом
+        val btnPaint = Paint().apply {
+            shader = LinearGradient(
+                x, y,
+                x, y + height,
+                btnColor,
+                Color.rgb(
+                    maxOf(red - 50, 0),
+                    maxOf(green - 50, 0),
+                    maxOf(blue - 50, 0)
+                ),
+                Shader.TileMode.CLAMP
+            )
+        }
+        canvas.drawRoundRect(
+            RectF(x, y, x + width, y + height),
+            15f, 15f, btnPaint
+        )
+
+        // Рамка кнопки
+        val borderPaint = Paint().apply {
+            color = Color.argb(100, 255, 255, 255)
+            style = Paint.Style.STROKE
+            strokeWidth = 2f
+        }
+        canvas.drawRoundRect(
+            RectF(x, y, x + width, y + height),
+            15f, 15f, borderPaint
+        )
+
+        // Свечение
+        val glowPaint = Paint().apply {
+            shader = RadialGradient(
+                x + width / 2, y + height / 2, width * 0.6f,
+                Color.argb(60, 255, 255, 255),
+                Color.TRANSPARENT,
+                Shader.TileMode.CLAMP
+            )
+        }
+        canvas.drawCircle(x + width / 2, y + height / 2, width * 0.6f, glowPaint)
+
+        // Текст
+        val textPaint = Paint().apply {
+            color = Color.WHITE
+            textSize = 26f
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        canvas.drawText(text, x + width / 2, y + height / 2 + 9f, textPaint)
     }
 }

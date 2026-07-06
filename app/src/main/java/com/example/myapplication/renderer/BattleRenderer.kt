@@ -30,6 +30,12 @@ class BattleRenderer {
         private var mobKnockbackY = 0f
         private var currentLocation: String = "Город"
 
+        // ⭐ ЭКРАННЫЕ КООРДИНАТЫ ДЛЯ УРОНА
+        private var battlePlayerX = 0f
+        private var battlePlayerY = 0f
+        private var battleMobX = 0f
+        private var battleMobY = 0f
+
         // ⭐ АНИМАЦИЯ АТАКИ МОБОВ
         private var isSpiderAttacking = false
         private var isManyEyesAttacking = false
@@ -93,6 +99,13 @@ class BattleRenderer {
                 shakeX = 0f
                 shakeY = 0f
             }
+
+            // ⭐ СОХРАНЯЕМ ЭКРАННЫЕ КООРДИНАТЫ
+            battlePlayerX = width * 0.25f
+            battlePlayerY = height * 0.55f
+            battleMobX = width * 0.75f + mobKnockbackX
+            battleMobY = height * 0.55f + mobKnockbackY
+
             canvas.translate(shakeX, shakeY)
 
             // --- РАМКА ---
@@ -135,16 +148,14 @@ class BattleRenderer {
                 }
             }
 
-            // ⭐ АНИМАЦИЯ АТАКИ МОБОВ - ИСПРАВЛЕНО
+            // ⭐ АНИМАЦИЯ АТАКИ МОБОВ
             if (isMobAttacking) {
                 attackAnimTimerMob++
 
-                // Меняем кадр каждые 3-4 тика
-                if (attackAnimTimerMob % 2 == 0) {  // ← было 4, стало 3 (чуть быстрее)
+                if (attackAnimTimerMob % 2 == 0) {
                     attackFrameIndex++
                 }
 
-                // Определяем максимальное количество кадров для текущего моба
                 val maxFrames = when {
                     isSpiderAttacking -> 8
                     isManyEyesAttacking -> 8
@@ -152,12 +163,12 @@ class BattleRenderer {
                     isSlimeGreenAttacking -> 6
                     isSteelKnightAttacking -> 8
                     isGoblinAttacking -> 8
+                    isMonkAttacking -> 6
                     isOrkAttacking -> 8
                     isTrollAttacking -> 8
                     else -> 6
                 }
 
-                // ⭐ СБРАСЫВАЕМ, КОГДА ПОКАЗАНЫ ВСЕ КАДРЫ
                 if (attackFrameIndex >= maxFrames) {
                     isMobAttacking = false
                     isSpiderAttacking = false
@@ -167,6 +178,8 @@ class BattleRenderer {
                     isSteelKnightAttacking = false
                     isGoblinAttacking = false
                     isMonkAttacking = false
+                    isOrkAttacking = false
+                    isTrollAttacking = false
                     attackAnimTimerMob = 0
                     attackFrameIndex = 0
                 }
@@ -201,8 +214,9 @@ class BattleRenderer {
 
             damageNumbers.removeAll { dn ->
                 dn.y += dn.vy
-                dn.vy += 0.3f
+                dn.vy += 0.4f
                 dn.life--
+                dn.x += sin(dn.life / 10f) * 0.3f
                 dn.life <= 0
             }
 
@@ -434,7 +448,7 @@ class BattleRenderer {
             canvas.drawArc(x - 25f * scale, y + 10f * scale, x + 25f * scale, y + 35f * scale, 0f, -180f, false, paint)
         }
 
-        // ===== ПАУК (БОЙ) С АНИМАЦИЕЙ АТАКИ =====
+        // ===== ПАУК (БОЙ) =====
         private fun drawSpiderBattle(canvas: Canvas, x: Float, y: Float, scale: Float, gameView: GameView) {
             val animName = if (isSpiderAttacking) "attack" else "idle"
             val animationFrames = gameView.getMobAnimationFrames("spider_battle", animName)
@@ -495,7 +509,7 @@ class BattleRenderer {
             canvas.drawCircle(x + 17f * scale, y - 15f * scale, 7f * scale, paint)
         }
 
-        // ===== МНОГОГЛАЗ (БОЙ) С АНИМАЦИЕЙ АТАКИ =====
+        // ===== МНОГОГЛАЗ (БОЙ) =====
         private fun drawManyEyesBattle(canvas: Canvas, x: Float, y: Float, scale: Float, gameView: GameView) {
             val animName = if (isManyEyesAttacking) "attack" else "idle"
             val animationFrames = gameView.getMobAnimationFrames("manyeyes_battle", animName)
@@ -547,7 +561,7 @@ class BattleRenderer {
             }
         }
 
-        // ===== КРАСНЫЙ РЫЦАРЬ (БОЙ) С АНИМАЦИЕЙ АТАКИ =====
+        // ===== КРАСНЫЙ РЫЦАРЬ (БОЙ) =====
         private fun drawRedKnightBattle(canvas: Canvas, x: Float, y: Float, scale: Float, gameView: GameView) {
             val animName = if (isRedKnightAttacking) "attack" else "idle"
             val animationFrames = gameView.getMobAnimationFrames("red_knight_battle", animName)
@@ -583,7 +597,7 @@ class BattleRenderer {
             canvas.drawCircle(x + 17f * scale, y - 15f * scale, 7f * scale, paint)
         }
 
-        // ===== ЗЕЛЁНЫЙ СЛИЗЕНЬ (БОЙ) С АНИМАЦИЕЙ АТАКИ =====
+        // ===== ЗЕЛЁНЫЙ СЛИЗЕНЬ (БОЙ) =====
         private fun drawSlimeGreenBattle(canvas: Canvas, x: Float, y: Float, scale: Float, gameView: GameView) {
             val animName = if (isSlimeGreenAttacking) "attack" else "idle"
             val animationFrames = gameView.getMobAnimationFrames("slime_green_battle", animName)
@@ -623,7 +637,7 @@ class BattleRenderer {
             canvas.drawArc(x - 20f * scale, y + 10f * scale, x + 20f * scale, y + 30f * scale, 0f, 180f, false, paint)
         }
 
-        // ===== СТАЛЬНОЙ РЫЦАРЬ (БОЙ) С АНИМАЦИЕЙ АТАКИ =====
+        // ===== СТАЛЬНОЙ РЫЦАРЬ (БОЙ) =====
         private fun drawSteelKnightBattle(canvas: Canvas, x: Float, y: Float, scale: Float, gameView: GameView) {
             val animName = if (isSteelKnightAttacking) "attack" else "idle"
             val animationFrames = gameView.getMobAnimationFrames("steel_knight_battle", animName)
@@ -663,7 +677,7 @@ class BattleRenderer {
             canvas.drawArc(x - 25f * scale, y - 25f * scale, x + 25f * scale, y + 5f * scale, 0f, 180f, false, paint)
         }
 
-        // ===== ГОБЛИН (БОЙ) С АНИМАЦИЕЙ АТАКИ =====
+        // ===== ГОБЛИН (БОЙ) =====
         private fun drawGoblinBattle(canvas: Canvas, x: Float, y: Float, scale: Float, gameView: GameView) {
             val animName = if (isGoblinAttacking) "attack" else "idle"
             val animationFrames = gameView.getMobAnimationFrames("goblin", animName)
@@ -676,7 +690,6 @@ class BattleRenderer {
                 }
                 val currentFrame = animationFrames[frameIndex % animationFrames.size]
 
-                // ⭐ УВЕЛИЧЕННЫЙ РАЗМЕР ДЛЯ БОЯ
                 val battleScale = 2.5f
                 val displayWidth = 80f * scale * battleScale
                 val displayHeight = 80f * scale * battleScale
@@ -710,6 +723,7 @@ class BattleRenderer {
             canvas.drawCircle(x + 17f * scale, y - 15f * scale, 7f * scale, paint)
         }
 
+        // ===== МОНАХ (БОЙ) =====
         private fun drawMonkBattle(canvas: Canvas, x: Float, y: Float, scale: Float, gameView: GameView) {
             val animName = if (isMonkAttacking) "attack" else "idle"
             val animationFrames = gameView.getMobAnimationFrames("monk", animName)
@@ -801,7 +815,6 @@ class BattleRenderer {
             paint.color = Color.BLACK
             canvas.drawCircle(x - 23f * scale, y - 15f * scale, 7f * scale, paint)
             canvas.drawCircle(x + 17f * scale, y - 15f * scale, 7f * scale, paint)
-            // Клыки
             paint.color = Color.WHITE
             paint.strokeWidth = 4f * scale
             canvas.drawLine(x - 12f * scale, y + 16f * scale, x - 20f * scale, y + 30f * scale, paint)
@@ -821,7 +834,7 @@ class BattleRenderer {
                 }
                 val currentFrame = animationFrames[frameIndex % animationFrames.size]
 
-                val battleScale = 2.8f  // Тролль чуть больше
+                val battleScale = 2.8f
                 val displayWidth = 80f * scale * battleScale
                 val displayHeight = 80f * scale * battleScale
 
@@ -852,7 +865,6 @@ class BattleRenderer {
             paint.color = Color.BLACK
             canvas.drawCircle(x - 23f * scale, y - 15f * scale, 7f * scale, paint)
             canvas.drawCircle(x + 17f * scale, y - 15f * scale, 7f * scale, paint)
-            // Рога
             paint.color = Color.rgb(180, 180, 200)
             paint.strokeWidth = 5f * scale
             canvas.drawLine(x - 25f * scale, y - 30f * scale, x - 35f * scale, y - 55f * scale, paint)
@@ -861,33 +873,60 @@ class BattleRenderer {
 
         // ===== ЭФФЕКТЫ =====
         private fun drawHitEffects(canvas: Canvas) {
-            if (hitEffectTimer > 0) {
-                val flashPaint = Paint().apply {
-                    color = Color.argb(hitEffectTimer * 12, 255, 255, 200)
-                }
-                canvas.drawCircle(hitEffectX, hitEffectY, hitEffectTimer * 5f, flashPaint)
-
-                val ringPaint = Paint().apply {
-                    color = Color.argb(hitEffectTimer * 6, 255, 200, 100)
-                    style = Paint.Style.STROKE
-                    strokeWidth = 5f
-                }
-                canvas.drawCircle(hitEffectX, hitEffectY, hitEffectTimer * 8f, ringPaint)
-                ringPaint.color = Color.argb(hitEffectTimer * 4, 255, 255, 100)
-                canvas.drawCircle(hitEffectX, hitEffectY, hitEffectTimer * 12f, ringPaint)
-            }
+//            if (hitEffectTimer > 0) {
+//                val flashPaint = Paint().apply {
+//                    color = Color.argb(hitEffectTimer * 12, 255, 255, 200)
+//                }
+//                canvas.drawCircle(hitEffectX, hitEffectY, hitEffectTimer * 5f, flashPaint)
+//
+//                val ringPaint = Paint().apply {
+//                    color = Color.argb(hitEffectTimer * 6, 255, 200, 100)
+//                    style = Paint.Style.STROKE
+//                    strokeWidth = 5f
+//                }
+//                canvas.drawCircle(hitEffectX, hitEffectY, hitEffectTimer * 8f, ringPaint)
+//                ringPaint.color = Color.argb(hitEffectTimer * 4, 255, 255, 100)
+//                canvas.drawCircle(hitEffectX, hitEffectY, hitEffectTimer * 12f, ringPaint)
+//            }
         }
 
         private fun drawDamageNumbers(canvas: Canvas) {
             val numbersToDraw = damageNumbers.toList()
             for (dn in numbersToDraw) {
-                val alpha = (255 * dn.life / dn.maxLife)
+                val progress = 1f - dn.life / dn.maxLife.toFloat()
+                val alpha = (255 * (1f - progress * 0.5f)).toInt()
+
+                val baseSize = when {
+                    dn.text.contains("💥") -> 80f
+                    dn.text.contains("💰") -> 55f
+                    dn.text.contains("EXP") -> 55f
+                    else -> 60f
+                }
+                val size = baseSize + (1f - progress) * 20f
+
+                textPaint.color = Color.BLACK
+                textPaint.alpha = (alpha * 0.5f).toInt()
+                textPaint.textSize = size
+                textPaint.textAlign = Paint.Align.CENTER
+                textPaint.typeface = Typeface.DEFAULT_BOLD
+                canvas.drawText(dn.text, dn.x + 3f, dn.y + 3f, textPaint)
+
                 textPaint.color = dn.color
                 textPaint.alpha = alpha
-                textPaint.textSize = 50f + (1 - dn.life / dn.maxLife.toFloat()) * 30f
+                textPaint.textSize = size
                 textPaint.textAlign = Paint.Align.CENTER
                 textPaint.typeface = Typeface.DEFAULT_BOLD
                 canvas.drawText(dn.text, dn.x, dn.y, textPaint)
+
+                if (dn.text.contains("💥") || dn.text.contains("💀") || dn.text.contains("👑")) {
+                    val glowPaint = Paint().apply {
+                        color = Color.argb((alpha * 0.2f).toInt(), 255, 200, 50)
+                        textSize = size * 1.3f
+                        textAlign = Paint.Align.CENTER
+                        typeface = Typeface.DEFAULT_BOLD
+                    }
+                    canvas.drawText(dn.text, dn.x, dn.y, glowPaint)
+                }
             }
         }
 
@@ -936,32 +975,69 @@ class BattleRenderer {
         }
 
         private fun drawAttackButton(canvas: Canvas, width: Float, height: Float) {
+            val btnWidth = width * 0.4f
+            val btnHeight = 140f
+            val btnX = (width - btnWidth) / 2
+            val btnY = height - btnHeight - 30f
+
+            val shadowPaint = Paint().apply {
+                color = Color.argb(60, 0, 0, 0)
+                style = Paint.Style.FILL
+            }
+            canvas.drawRoundRect(
+                RectF(btnX + 8f, btnY + 8f, btnX + btnWidth + 8f, btnY + btnHeight + 8f),
+                25f, 25f, shadowPaint
+            )
+
             val btnPaint = Paint().apply {
                 shader = LinearGradient(
-                    width - 200f, height - 120f,
-                    width - 30f, height - 30f,
-                    Color.rgb(255, 80, 30),
+                    btnX, btnY,
+                    btnX, btnY + btnHeight,
+                    Color.rgb(255, 70, 30),
                     Color.rgb(200, 40, 10),
                     Shader.TileMode.CLAMP
                 )
             }
-            canvas.drawRoundRect(RectF(width - 200f, height - 120f, width - 30f, height - 30f), 20f, 20f, btnPaint)
+            canvas.drawRoundRect(
+                RectF(btnX, btnY, btnX + btnWidth, btnY + btnHeight),
+                25f, 25f, btnPaint
+            )
+
+            val pulse = (150 + sin(System.currentTimeMillis() / 200.0) * 80).toInt()
+            val borderPaint = Paint().apply {
+                color = Color.argb(pulse, 255, 255, 200)
+                style = Paint.Style.STROKE
+                strokeWidth = 5f
+            }
+            canvas.drawRoundRect(
+                RectF(btnX, btnY, btnX + btnWidth, btnY + btnHeight),
+                25f, 25f, borderPaint
+            )
 
             val glowPaint = Paint().apply {
-                shader = RadialGradient(width - 115f, height - 75f, 120f, Color.argb(100, 255, 200, 100), Color.TRANSPARENT, Shader.TileMode.CLAMP)
+                shader = RadialGradient(
+                    btnX + btnWidth / 2, btnY + btnHeight / 2, btnWidth * 0.7f,
+                    Color.argb(80, 255, 200, 100),
+                    Color.TRANSPARENT,
+                    Shader.TileMode.CLAMP
+                )
             }
-            canvas.drawCircle(width - 115f, height - 75f, 120f, glowPaint)
+            canvas.drawCircle(btnX + btnWidth / 2, btnY + btnHeight / 2, btnWidth * 0.7f, glowPaint)
 
-            paint.color = Color.argb(100, 255, 255, 255)
-            paint.style = Paint.Style.STROKE
-            paint.strokeWidth = 3f
-            canvas.drawRoundRect(RectF(width - 200f, height - 120f, width - 30f, height - 30f), 20f, 20f, paint)
+            val swordPaint = Paint().apply {
+                color = Color.WHITE
+                textSize = 70f
+                textAlign = Paint.Align.CENTER
+            }
+            canvas.drawText("⚔️", btnX + btnWidth / 2 - 60f, btnY + btnHeight / 2 + 25f, swordPaint)
 
-            textPaint.color = Color.WHITE
-            textPaint.textSize = 36f
-            textPaint.textAlign = Paint.Align.CENTER
-            textPaint.typeface = Typeface.DEFAULT_BOLD
-            canvas.drawText("⚔️ АТАКА", width - 115f, height - 58f, textPaint)
+            val textPaint = Paint().apply {
+                color = Color.WHITE
+                textSize = 38f
+                textAlign = Paint.Align.LEFT
+                typeface = Typeface.DEFAULT_BOLD
+            }
+            canvas.drawText("АТАКА", btnX + btnWidth / 2 + 10f, btnY + btnHeight / 2 + 25f, textPaint)
         }
 
         private fun drawBattleStatus(canvas: Canvas, width: Float, height: Float, manager: BattleManager) {
@@ -1002,17 +1078,49 @@ class BattleRenderer {
             shakeTimer = 10
         }
 
-        fun showDamageNumber(x: Float, y: Float, text: String, color: Int = Color.YELLOW) {
-            damageNumbers.add(DamageNumber(x, y, text, 70, 70, -6f, color))
+        // ⭐ НОВЫЙ МЕТОД ДЛЯ ОТОБРАЖЕНИЯ УРОНА С ЭКРАННЫМИ КООРДИНАТАМИ
+        fun showBattleDamageNumber(
+            target: String,  // "player" или "mob"
+            text: String,
+            color: Int = Color.YELLOW,
+            offsetY: Float = 0f
+        ) {
+            val x = if (target == "player") battlePlayerX else battleMobX
+            val y = if (target == "player") battlePlayerY else battleMobY
+
+            damageNumbers.add(
+                DamageNumber(
+                    x = x,
+                    y = y + offsetY,
+                    text = text,
+                    life = 50,
+                    maxLife = 50,
+                    vy = -12f,
+                    color = color
+                )
+            )
         }
 
-        // ⭐ ОБНОВЛЁННЫЙ МЕТОД С ПЕРЕДАЧЕЙ ТИПА МОБА
+        // ⭐ СТАРЫЙ МЕТОД ОСТАВЛЯЕМ ДЛЯ СОВМЕСТИМОСТИ (НО НЕ ИСПОЛЬЗУЕМ)
+        fun showDamageNumber(x: Float, y: Float, text: String, color: Int = Color.YELLOW) {
+            damageNumbers.add(
+                DamageNumber(
+                    x = x,
+                    y = y,
+                    text = text,
+                    life = 80,
+                    maxLife = 80,
+                    vy = -8f,
+                    color = color
+                )
+            )
+        }
+
         fun triggerMobAttack(mobType: Int = -1) {
             isMobAttacking = true
             attackAnimTimerMob = 0
             attackFrameIndex = 0
 
-            // Устанавливаем флаг для конкретного моба
             when (mobType) {
                 1 -> isSpiderAttacking = true
                 2 -> isManyEyesAttacking = true

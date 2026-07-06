@@ -99,15 +99,6 @@ class DropManager {
                         description = "Качественный стальной меч"
                     ),
                     DropTable.DropEntry(
-                        itemId = "sword_flame",
-                        itemName = "Пламенный меч",
-                        itemType = Item.ItemType.WEAPON,
-                        rarity = ItemRarity.EPIC,
-                        chance = 1.0,
-                        stats = ItemStats(attack = 18, strength = 3, agility = 1),
-                        description = "Меч, пылающий огнём"
-                    ),
-                    DropTable.DropEntry(
                         itemId = "cake_large",
                         itemName = "Большой торт",
                         itemType = Item.ItemType.CONSUMABLE,
@@ -205,15 +196,6 @@ class DropManager {
                 maxLevel = 6,
                 dropTable = DropTable.createMixedDrop(
                     DropTable.DropEntry(
-                        itemId = "sword_arachnid",
-                        itemName = "Паучий меч",
-                        itemType = Item.ItemType.WEAPON,
-                        rarity = ItemRarity.RARE,
-                        chance = 3.0,
-                        stats = ItemStats(attack = 14, agility = 3, luck = 1),
-                        description = "Меч, сплетённый из паутины"
-                    ),
-                    DropTable.DropEntry(
                         itemId = "sword_venomous",
                         itemName = "Меч смертельного яда",
                         itemType = Item.ItemType.WEAPON,
@@ -287,15 +269,6 @@ class DropManager {
                         chance = 8.0,
                         stats = ItemStats(attack = 11, strength = 3),
                         description = "Тяжёлый железный топор"
-                    ),
-                    DropTable.DropEntry(
-                        itemId = "sword_moonlight",
-                        itemName = "Лунный меч",
-                        itemType = Item.ItemType.WEAPON,
-                        rarity = ItemRarity.RARE,
-                        chance = 2.0,
-                        stats = ItemStats(attack = 16, luck = 3, agility = 1),
-                        description = "Меч, светящийся в лунном свете"
                     ),
                     DropTable.DropEntry(
                         itemId = "cake_medium",
@@ -403,15 +376,6 @@ class DropManager {
                 minLevel = 7,
                 maxLevel = 9,
                 dropTable = DropTable.createMixedDrop(
-                    DropTable.DropEntry(
-                        itemId = "sword_arachnid",
-                        itemName = "Паучий меч",
-                        itemType = Item.ItemType.WEAPON,
-                        rarity = ItemRarity.RARE,
-                        chance = 10.0,
-                        stats = ItemStats(attack = 14, agility = 3, luck = 1),
-                        description = "Меч, сплетённый из паутины"
-                    ),
                     DropTable.DropEntry(
                         itemId = "sword_venomous",
                         itemName = "Меч смертельного яда",
@@ -653,7 +617,7 @@ class DropManager {
                 goldChance = 95
             )
         )
-
+            // монах
         dropConfigs.add(
             MobDrop(
                 mobType = 7,
@@ -679,6 +643,15 @@ class DropManager {
                         chance = 5.0,
                         stats = ItemStats(defense = 2, health = 6, agility = 1, strength = 2),
                         description = "Удобные штаны для долгих странствий 👖"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "sword_arachnid",
+                        itemName = "Мощный меч",
+                        itemType = Item.ItemType.WEAPON,
+                        rarity = ItemRarity.EPIC,
+                        chance = 0.5,
+                        stats = ItemStats(attack = 37, health = 15, strength = 8, agility = 8, luck = 4),
+                        description = "Мощный меч"
                     ),
                     // Большой торт (для разнообразия)
                     DropTable.DropEntry(
@@ -715,6 +688,15 @@ class DropManager {
                         stats = ItemStats(defense = 8, health = 15, strength = 4),
                         description = "Тяжёлая броня, снятая с поверженного орка 🛡️"
                     ),
+                    DropTable.DropEntry(
+                        itemId = "sword_moonlight",
+                        itemName = "Лунный меч",
+                        itemType = Item.ItemType.WEAPON,
+                        rarity = ItemRarity.EPIC,
+                        chance = 0.5,
+                        stats = ItemStats(attack = 39, health = 17, strength = 10, agility = 6, luck = 6),
+                        description = "Меч, светящийся в лунном свете"
+                    ),
                     // Большой торт
                     DropTable.DropEntry(
                         itemId = "cake_large",
@@ -749,6 +731,15 @@ class DropManager {
                         chance = 5.0,
                         stats = ItemStats(defense = 5, health = 10, agility = 2, strength = 3),
                         description = "Массивные сапоги, снятые с тролля 👢"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "sword_flame",
+                        itemName = "Пламенный меч",
+                        itemType = Item.ItemType.WEAPON,
+                        rarity = ItemRarity.EPIC,
+                        chance = 1.0,
+                        stats = ItemStats(attack = 45, health = 15, strength = 12, agility = 5, luck = 5),
+                        description = "Меч, пылающий огнём"
                     ),
                     // Большой торт
                     DropTable.DropEntry(

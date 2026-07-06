@@ -70,7 +70,7 @@ class SpriteManager(private val context: Context) {
         loadSpriteSheet("steel_knight_battle", "steel_knight.json")
         loadSpriteSheet("goblin", "goblin.json")
         loadSpriteSheet("monk", "monk.json")
-        loadSpriteSheet("ork", "ork.json")
+        loadSpriteSheet("lizard", "lizard.json")
         loadSpriteSheet("troll", "troll.json")
 
         loadSpriteSheet("character_zombie", "character_zombie.json")
@@ -201,7 +201,7 @@ class SpriteManager(private val context: Context) {
                     animMap["walk_right"] = Animation(walkRightFrames, 8)
                     animMap["attack"] = Animation(attackFrames, 2)
                 }
-                "ork" -> {
+                "lizard" -> {
                     val idleFrames = allFrames.filter { it.startsWith("idle_") }
                     val walkLeftFrames = allFrames.filter { it.startsWith("walk_left_") }
                     val walkRightFrames = allFrames.filter { it.startsWith("walk_right_") }
