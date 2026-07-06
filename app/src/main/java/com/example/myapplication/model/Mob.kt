@@ -23,6 +23,9 @@ data class Mob(
         4 -> if (isBoss) "👑 Зелёный слизень" else "Зелёный слизень"
         5 -> if (isBoss) "👑 Стальной рыцарь" else "Стальной рыцарь"
         6 -> if (isBoss) "👑 Гоблин-босс" else "Гоблин"
+        7 -> if (isBoss) "👑 Монах-босс" else "Монах"
+        8 -> if (isBoss) "👑 Орк-босс" else "Орк"
+        9 -> if (isBoss) "👑 Тролль-босс" else "Тролль"
         else -> "Моб"
     }
 

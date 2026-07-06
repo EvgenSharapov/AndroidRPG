@@ -8,8 +8,8 @@ object GameRenderer {
     private var bgForest: Bitmap? = null
     private var bgWasteland: Bitmap? = null
     private var bgRocks: Bitmap? = null
-
     private var bgCastle: Bitmap? = null
+    private var bgDesert: Bitmap? = null
 
     fun loadBackgrounds(context: android.content.Context) {
         bgCity = loadBitmap(context, "bg_city")
@@ -17,6 +17,7 @@ object GameRenderer {
         bgWasteland = loadBitmap(context, "bg_wasteland")
         bgRocks = loadBitmap(context, "bg_rocks")
         bgCastle = loadBitmap(context, "bg_castle")
+        bgDesert = loadBitmap(context, "bg_desert")
     }
 
     private fun loadBitmap(context: android.content.Context, name: String): Bitmap? {
@@ -45,6 +46,7 @@ object GameRenderer {
             LocationManager.Location.WASTELAND -> bgWasteland
             LocationManager.Location.ROCKS -> bgRocks
             LocationManager.Location.CASTLE -> bgCastle
+            LocationManager.Location.DESERT -> bgDesert
         }
 
         if (bitmap != null) {
@@ -67,6 +69,7 @@ object GameRenderer {
             LocationManager.Location.WASTELAND -> Color.rgb(140, 120, 80)
             LocationManager.Location.ROCKS -> Color.rgb(100, 100, 120)
             LocationManager.Location.CASTLE -> Color.rgb(80, 80, 100)
+            LocationManager.Location.DESERT -> Color.rgb(80, 80, 100)
         }
         canvas.drawColor(color)
     }

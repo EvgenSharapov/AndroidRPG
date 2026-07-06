@@ -628,6 +628,24 @@ class DropManager {
                         rarity = ItemRarity.RARE,
                         chance = 30.0,
                         description = "Восстанавливает 120 HP 🎂"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "helmet_2",
+                        itemName = "Шлем гоблина",
+                        itemType = Item.ItemType.HELMET,
+                        rarity = ItemRarity.EPIC,
+                        chance = 1.0,
+                        stats = ItemStats(defense = 1, health = 5, strength = 1),
+                        description = "Шлем, снятый с могучего гоблина"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "chest_1",
+                        itemName = "Броня гоблина",
+                        itemType = Item.ItemType.CHEST,
+                        rarity = ItemRarity.EPIC,
+                        chance = 1.0,
+                        stats = ItemStats(defense = 3, health = 8, strength = 2),
+                        description = "Прочная броня, снятая с гоблина-воина 🛡️"
                     )
                 ),
                 goldMin = 40,
@@ -635,9 +653,119 @@ class DropManager {
                 goldChance = 95
             )
         )
+
+        dropConfigs.add(
+            MobDrop(
+                mobType = 7,
+                minLevel = 12,
+                maxLevel = 13,
+                dropTable = DropTable.createMixedDrop(
+                    // ⭐ ПЕРЧАТКИ (1% шанс)
+                    DropTable.DropEntry(
+                        itemId = "gloves_1",
+                        itemName = "Перчатки монаха",
+                        itemType = Item.ItemType.GLOVES,
+                        rarity = ItemRarity.EPIC,
+                        chance = 5.0,
+                        stats = ItemStats(defense = 2, health = 4, agility = 2, strength = 1),
+                        description = "Перчатки, укрепляющие силу духа 🥊"
+                    ),
+                    // ⭐ ШТАНЫ (1% шанс)
+                    DropTable.DropEntry(
+                        itemId = "pants_1",
+                        itemName = "Штаны монаха",
+                        itemType = Item.ItemType.PANTS,
+                        rarity = ItemRarity.EPIC,
+                        chance = 5.0,
+                        stats = ItemStats(defense = 2, health = 6, agility = 1, strength = 2),
+                        description = "Удобные штаны для долгих странствий 👖"
+                    ),
+                    // Большой торт (для разнообразия)
+                    DropTable.DropEntry(
+                        itemId = "cake_large",
+                        itemName = "Большой торт",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.RARE,
+                        chance = 25.0,
+                        description = "Восстанавливает 120 HP 🎂"
+                    )
+                ),
+                goldMin = 50,
+                goldMax = 80,
+                goldChance = 95
+            )
+        )
+
+        // ============================================
+// ОРК (тип 8) — УРОВЕНЬ 13-14
+// ============================================
+        dropConfigs.add(
+            MobDrop(
+                mobType = 8,
+                minLevel = 13,
+                maxLevel = 14,
+                dropTable = DropTable.createMixedDrop(
+                    // ⭐ БРОНЯ (5% шанс)
+                    DropTable.DropEntry(
+                        itemId = "chest_2",
+                        itemName = "Броня орка",
+                        itemType = Item.ItemType.CHEST,
+                        rarity = ItemRarity.RARE,
+                        chance = 5.0,
+                        stats = ItemStats(defense = 8, health = 15, strength = 4),
+                        description = "Тяжёлая броня, снятая с поверженного орка 🛡️"
+                    ),
+                    // Большой торт
+                    DropTable.DropEntry(
+                        itemId = "cake_large",
+                        itemName = "Большой торт",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.RARE,
+                        chance = 25.0,
+                        description = "Восстанавливает 120 HP 🎂"
+                    )
+                ),
+                goldMin = 40,
+                goldMax = 70,
+                goldChance = 90
+            )
+        )
+
+// ============================================
+// ТРОЛЛЬ (тип 9) — УРОВЕНЬ 14-15
+// ============================================
+        dropConfigs.add(
+            MobDrop(
+                mobType = 9,
+                minLevel = 14,
+                maxLevel = 15,
+                dropTable = DropTable.createMixedDrop(
+                    // ⭐ БОТИНКИ (5% шанс)
+                    DropTable.DropEntry(
+                        itemId = "boots_1",
+                        itemName = "Сапоги тролля",
+                        itemType = Item.ItemType.BOOTS,
+                        rarity = ItemRarity.RARE,
+                        chance = 5.0,
+                        stats = ItemStats(defense = 5, health = 10, agility = 2, strength = 3),
+                        description = "Массивные сапоги, снятые с тролля 👢"
+                    ),
+                    // Большой торт
+                    DropTable.DropEntry(
+                        itemId = "cake_large",
+                        itemName = "Большой торт",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.RARE,
+                        chance = 25.0,
+                        description = "Восстанавливает 120 HP 🎂"
+                    )
+                ),
+                goldMin = 50,
+                goldMax = 90,
+                goldChance = 95
+            )
+        )
     }
-
-
 
     fun getDropForMob(mob: Mob): Pair<List<Item>, Int> {
         // Ищем конфигурацию дропа

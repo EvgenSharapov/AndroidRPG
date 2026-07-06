@@ -3,11 +3,15 @@ package com.example.myapplication.ui
 import android.content.Context
 import android.graphics.*
 import com.example.myapplication.GameView
+import com.example.myapplication.SpriteManager
 import com.example.myapplication.model.*
 import kotlin.math.cos
 import kotlin.math.sin
 
-class InventoryScreen (private val context: Context){
+class InventoryScreen(
+    private val context: Context,
+    private val spriteManager: SpriteManager
+) {
 
     private val slotSize = 180f
     private val padding = 20f
@@ -961,6 +965,35 @@ class InventoryScreen (private val context: Context){
             "cake_small" -> loadIcon("cake_small")
             "cake_medium" -> loadIcon("cake_medium")
             "cake_large" -> loadIcon("cake_large")
+            // Шлемы
+            "helmet_2" -> loadItemIconFromSprite("armor_items", "helmet_2")
+            "helmet_3" -> loadItemIconFromSprite("armor_items", "helmet_3")
+            "helmet_4" -> loadItemIconFromSprite("armor_items", "helmet_4")
+            "helmet_5" -> loadItemIconFromSprite("armor_items", "helmet_5")
+            // Броня
+            "chest_1" -> loadItemIconFromSprite("armor_items", "chest_1")
+            "chest_2" -> loadItemIconFromSprite("armor_items", "chest_2")
+            "chest_3" -> loadItemIconFromSprite("armor_items", "chest_3")
+            "chest_4" -> loadItemIconFromSprite("armor_items", "chest_4")
+            "chest_5" -> loadItemIconFromSprite("armor_items", "chest_5")
+            // Перчатки
+            "gloves_1" -> loadItemIconFromSprite("armor_items", "gloves_1")
+            "gloves_2" -> loadItemIconFromSprite("armor_items", "gloves_2")
+            "gloves_3" -> loadItemIconFromSprite("armor_items", "gloves_3")
+            "gloves_4" -> loadItemIconFromSprite("armor_items", "gloves_4")
+            "gloves_5" -> loadItemIconFromSprite("armor_items", "gloves_5")
+            // Поножи
+            "pants_1" -> loadItemIconFromSprite("armor_items", "pants_1")
+            "pants_2" -> loadItemIconFromSprite("armor_items", "pants_2")
+            "pants_3" -> loadItemIconFromSprite("armor_items", "pants_3")
+            "pants_4" -> loadItemIconFromSprite("armor_items", "pants_4")
+            "pants_5" -> loadItemIconFromSprite("armor_items", "pants_5")
+            // Ботинки
+            "boots_1" -> loadItemIconFromSprite("armor_items", "boots_1")
+            "boots_2" -> loadItemIconFromSprite("armor_items", "boots_2")
+            "boots_3" -> loadItemIconFromSprite("armor_items", "boots_3")
+            "boots_4" -> loadItemIconFromSprite("armor_items", "boots_4")
+            "boots_5" -> loadItemIconFromSprite("armor_items", "boots_5")
             else -> null
         }
     }
@@ -1012,4 +1045,36 @@ class InventoryScreen (private val context: Context){
         )
     }
 
+    // ⭐ НОВЫЙ МЕТОД ДЛЯ ЗАГРУЗКИ ИКОНОК ИЗ СПРАЙТ-ЛИСТА
+    private fun loadItemIconFromSprite(sheetName: String, frameName: String): Bitmap? {
+        return try {
+            val spriteSheet = getSpriteSheet(sheetName) ?: return null
+            val frameRect = getFrame(sheetName, frameName) ?: return null
+
+            // Вырезаем нужный кадр из спрайт-листа
+            Bitmap.createBitmap(
+                spriteSheet,
+                frameRect.left,
+                frameRect.top,
+                frameRect.width(),
+                frameRect.height()
+            )
+        } catch (e: Exception) {
+            println("❌ Ошибка загрузки иконки $frameName: ${e.message}")
+            null
+        }
+    }
+
+    // Вспомогательные методы для доступа к SpriteManager
+    private fun getSpriteSheet(name: String): Bitmap? {
+        return (context as? android.app.Activity)?.let {
+            spriteManager?.getSpriteSheet(name)
+        }
+    }
+
+    private fun getFrame(sheetName: String, frameName: String): Rect? {
+        return (context as? android.app.Activity)?.let {
+            spriteManager?.getFrame(sheetName, frameName)
+        }
+    }
 }

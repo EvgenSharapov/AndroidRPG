@@ -13,13 +13,23 @@ class StatsScreen {
         val maxLevel: Int = 99
     )
 
+    // ⭐ КОНСТАНТЫ ДЛЯ КООРДИНАТ
+    private val STATS_START_Y = 220f
+    private val STAT_ITEM_HEIGHT = 70f
+    private val STATS_COUNT = 5
+    private val RESET_BTN_WIDTH = 300f
+    private val RESET_BTN_HEIGHT = 60f
+
+    private var showResetConfirm = false
+
     fun draw(
         canvas: Canvas,
         width: Float,
         height: Float,
         player: Player,
         onUpgrade: (Player.StatType) -> Unit,
-        onClose: () -> Unit
+        onClose: () -> Unit,
+        onResetStats: () -> Unit
     ) {
         // --- ФОН (затемнение) ---
         val bgPaint = Paint().apply {
@@ -37,55 +47,7 @@ class StatsScreen {
         canvas.drawText("💰 ${player.gold}", 30f, 75f, goldPaint)
 
         // ⭐ КНОПКА ЗАКРЫТИЯ (КРЕСТИК СПРАВА СВЕРХУ)
-        val closeBtnSize = 60f
-        val closeX = width - 40f
-        val closeY = 45f
-        val halfSize = closeBtnSize / 2
-
-        // Фон кнопки (круг)
-        val closeBgPaint = Paint().apply {
-            color = Color.rgb(200, 50, 50)
-            style = Paint.Style.FILL
-        }
-        canvas.drawCircle(closeX, closeY, halfSize + 10f, closeBgPaint)
-
-        // Свечение кнопки
-        val glowPaint = Paint().apply {
-            shader = RadialGradient(
-                closeX, closeY, halfSize + 30f,
-                Color.argb(60, 255, 100, 100),
-                Color.TRANSPARENT,
-                Shader.TileMode.CLAMP
-            )
-        }
-        canvas.drawCircle(closeX, closeY, halfSize + 30f, glowPaint)
-
-        // Крестик (X)
-        val crossPaint = Paint().apply {
-            color = Color.WHITE
-            strokeWidth = 8f
-            style = Paint.Style.STROKE
-            strokeCap = Paint.Cap.ROUND
-        }
-        val crossSize = halfSize * 0.6f
-        canvas.drawLine(
-            closeX - crossSize, closeY - crossSize,
-            closeX + crossSize, closeY + crossSize,
-            crossPaint
-        )
-        canvas.drawLine(
-            closeX + crossSize, closeY - crossSize,
-            closeX - crossSize, closeY + crossSize,
-            crossPaint
-        )
-
-        // Рамка кнопки
-        val borderPaint = Paint().apply {
-            color = Color.argb(80, 255, 255, 255)
-            style = Paint.Style.STROKE
-            strokeWidth = 2f
-        }
-        canvas.drawCircle(closeX, closeY, halfSize + 10f, borderPaint)
+        drawCloseButton(canvas, width)
 
         // --- ЗАГОЛОВОК ---
         val titlePaint = Paint().apply {
@@ -129,8 +91,6 @@ class StatsScreen {
         )
 
         // --- ХАРАКТЕРИСТИКИ ---
-        val startY = 220f
-        val itemHeight = 70f
         val stats = listOf(
             Triple(Player.StatType.STRENGTH, "💪 Сила", "Увеличивает урон"),
             Triple(Player.StatType.ENDURANCE, "❤️ Выносливость", "Увеличивает HP"),
@@ -140,14 +100,14 @@ class StatsScreen {
         )
 
         for ((index, stat) in stats.withIndex()) {
-            val y = startY + index * itemHeight
+            val y = STATS_START_Y + index * STAT_ITEM_HEIGHT
 
             // Фон строки
             val rowPaint = Paint().apply {
                 color = Color.argb(80, 255, 255, 255)
             }
             canvas.drawRoundRect(
-                RectF(30f, y, width - 30f, y + itemHeight),
+                RectF(30f, y, width - 30f, y + STAT_ITEM_HEIGHT),
                 12f, 12f, rowPaint
             )
 
@@ -209,6 +169,238 @@ class StatsScreen {
             }
             canvas.drawText(stat.third, 50f, y + 65f, descPaint)
         }
+
+        // ⭐ КНОПКА СБРОСА ХАРАКТЕРИСТИК (ВНИЗУ)
+        val resetY = STATS_START_Y + STATS_COUNT * STAT_ITEM_HEIGHT + 30f
+
+        // Фон для кнопки
+        val resetBgPaint = Paint().apply {
+            color = Color.argb(80, 0, 0, 0)
+        }
+        canvas.drawRoundRect(
+            RectF(30f, resetY, width - 30f, resetY + 70f),
+            15f, 15f, resetBgPaint
+        )
+
+        // Кнопка сброса
+        val canReset = player.gold >= 1000
+        val resetBtnPaint = Paint().apply {
+            color = if (canReset) Color.rgb(200, 50, 50) else Color.argb(100, 100, 100, 100)
+            style = Paint.Style.FILL
+        }
+        canvas.drawRoundRect(
+            RectF(width / 2 - RESET_BTN_WIDTH / 2, resetY + 5f,
+                width / 2 + RESET_BTN_WIDTH / 2, resetY + 5f + RESET_BTN_HEIGHT),
+            12f, 12f, resetBtnPaint
+        )
+
+        // Свечение кнопки (если можно сбросить)
+        if (canReset) {
+            val glowResetPaint = Paint().apply {
+                shader = RadialGradient(
+                    width / 2, resetY + 35f, 200f,
+                    Color.argb(60, 255, 100, 100),
+                    Color.TRANSPARENT,
+                    Shader.TileMode.CLAMP
+                )
+            }
+            canvas.drawCircle(width / 2, resetY + 35f, 200f, glowResetPaint)
+        }
+
+        val resetTextPaint = Paint().apply {
+            color = if (canReset) Color.WHITE else Color.argb(150, 200, 200, 200)
+            textSize = 26f
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        val resetText = if (canReset) {
+            "🔄 Сбросить характеристики (1000💰)"
+        } else {
+            "❌ Недостаточно золота (нужно 1000💰)"
+        }
+        canvas.drawText(resetText, width / 2, resetY + 48f, resetTextPaint)
+
+        // ⭐ ОКНО ПОДТВЕРЖДЕНИЯ СБРОСА
+        if (showResetConfirm) {
+            drawResetConfirmDialog(canvas, width, height)
+        }
+    }
+
+    // ⭐ КНОПКА ЗАКРЫТИЯ
+    private fun drawCloseButton(canvas: Canvas, width: Float) {
+        val closeBtnSize = 60f
+        val closeX = width - 40f
+        val closeY = 45f
+        val halfSize = closeBtnSize / 2
+
+        val closeBgPaint = Paint().apply {
+            color = Color.rgb(200, 50, 50)
+            style = Paint.Style.FILL
+        }
+        canvas.drawCircle(closeX, closeY, halfSize + 10f, closeBgPaint)
+
+        val glowPaint = Paint().apply {
+            shader = RadialGradient(
+                closeX, closeY, halfSize + 30f,
+                Color.argb(60, 255, 100, 100),
+                Color.TRANSPARENT,
+                Shader.TileMode.CLAMP
+            )
+        }
+        canvas.drawCircle(closeX, closeY, halfSize + 30f, glowPaint)
+
+        val crossPaint = Paint().apply {
+            color = Color.WHITE
+            strokeWidth = 8f
+            style = Paint.Style.STROKE
+            strokeCap = Paint.Cap.ROUND
+        }
+        val crossSize = halfSize * 0.6f
+        canvas.drawLine(
+            closeX - crossSize, closeY - crossSize,
+            closeX + crossSize, closeY + crossSize,
+            crossPaint
+        )
+        canvas.drawLine(
+            closeX + crossSize, closeY - crossSize,
+            closeX - crossSize, closeY + crossSize,
+            crossPaint
+        )
+
+        val borderPaint = Paint().apply {
+            color = Color.argb(80, 255, 255, 255)
+            style = Paint.Style.STROKE
+            strokeWidth = 2f
+        }
+        canvas.drawCircle(closeX, closeY, halfSize + 10f, borderPaint)
+    }
+
+    // ⭐ ОКНО ПОДТВЕРЖДЕНИЯ СБРОСА
+    private fun drawResetConfirmDialog(canvas: Canvas, width: Float, height: Float) {
+        // Затемнение фона
+        val dimPaint = Paint().apply {
+            color = Color.argb(200, 0, 0, 0)
+        }
+        canvas.drawRect(0f, 0f, width, height, dimPaint)
+
+        // Окно подтверждения
+        val dialogPaint = Paint().apply {
+            color = Color.argb(240, 30, 20, 40)
+        }
+        val dialogWidth = 600f
+        val dialogHeight = 350f
+        val dialogX = (width - dialogWidth) / 2
+        val dialogY = (height - dialogHeight) / 2
+
+        canvas.drawRoundRect(
+            RectF(dialogX, dialogY, dialogX + dialogWidth, dialogY + dialogHeight),
+            25f, 25f, dialogPaint
+        )
+
+        // Рамка
+        val borderPaint = Paint().apply {
+            color = Color.argb(100, 255, 100, 100)
+            style = Paint.Style.STROKE
+            strokeWidth = 3f
+        }
+        canvas.drawRoundRect(
+            RectF(dialogX, dialogY, dialogX + dialogWidth, dialogY + dialogHeight),
+            25f, 25f, borderPaint
+        )
+
+        // Свечение
+        val glowPaint = Paint().apply {
+            shader = RadialGradient(
+                width / 2, dialogY + 60f, 300f,
+                Color.argb(40, 255, 100, 100),
+                Color.TRANSPARENT,
+                Shader.TileMode.CLAMP
+            )
+        }
+        canvas.drawCircle(width / 2, dialogY + 60f, 300f, glowPaint)
+
+        // Иконка
+        val iconPaint = Paint().apply {
+            color = Color.rgb(255, 200, 100)
+            textSize = 60f
+            textAlign = Paint.Align.CENTER
+        }
+        canvas.drawText("🔄", width / 2, dialogY + 75f, iconPaint)
+
+        // Текст
+        val textPaint = Paint().apply {
+            color = Color.WHITE
+            textSize = 34f
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        canvas.drawText("Сбросить характеристики?", width / 2, dialogY + 130f, textPaint)
+
+        // Информация
+        val infoPaint = Paint().apply {
+            color = Color.argb(200, 255, 215, 0)
+            textSize = 28f
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        canvas.drawText("Стоимость: 1000 💰", width / 2, dialogY + 175f, infoPaint)
+
+        val warningPaint = Paint().apply {
+            color = Color.argb(200, 255, 150, 150)
+            textSize = 22f
+            textAlign = Paint.Align.CENTER
+        }
+        canvas.drawText("Все очки характеристик будут сброшены!", width / 2, dialogY + 210f, warningPaint)
+
+        // Кнопка "ДА"
+        val btnWidth = 160f
+        val btnHeight = 60f
+        val btnY = dialogY + 240f
+
+        val yesPaint = Paint().apply {
+            color = Color.rgb(200, 50, 50)
+            style = Paint.Style.FILL
+        }
+        canvas.drawRoundRect(
+            RectF(dialogX + 50f, btnY, dialogX + 50f + btnWidth, btnY + btnHeight),
+            15f, 15f, yesPaint
+        )
+
+        val yesGlow = Paint().apply {
+            shader = RadialGradient(
+                dialogX + 50f + btnWidth / 2, btnY + btnHeight / 2, 80f,
+                Color.argb(60, 255, 100, 100),
+                Color.TRANSPARENT,
+                Shader.TileMode.CLAMP
+            )
+        }
+        canvas.drawCircle(dialogX + 50f + btnWidth / 2, btnY + btnHeight / 2, 80f, yesGlow)
+
+        val yesText = Paint().apply {
+            color = Color.WHITE
+            textSize = 28f
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        canvas.drawText("ДА", dialogX + 50f + btnWidth / 2, btnY + btnHeight / 2 + 10f, yesText)
+
+        // Кнопка "НЕТ"
+        val noPaint = Paint().apply {
+            color = Color.rgb(80, 80, 80)
+            style = Paint.Style.FILL
+        }
+        canvas.drawRoundRect(
+            RectF(dialogX + dialogWidth - btnWidth - 50f, btnY, dialogX + dialogWidth - 50f, btnY + btnHeight),
+            15f, 15f, noPaint
+        )
+
+        val noText = Paint().apply {
+            color = Color.WHITE
+            textSize = 28f
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        canvas.drawText("НЕТ", dialogX + dialogWidth - btnWidth / 2 - 50f, btnY + btnHeight / 2 + 10f, noText)
     }
 
     // Обработка касаний на экране характеристик
@@ -219,9 +411,37 @@ class StatsScreen {
         height: Float,
         player: Player,
         onUpgrade: (Player.StatType) -> Unit,
-        onClose: () -> Unit
+        onClose: () -> Unit,
+        onResetStats: () -> Unit
     ): Boolean {
-        // ⭐ КНОПКА ЗАКРЫТИЯ (КРЕСТИК СПРАВА СВЕРХУ)
+        // ⭐ ЕСЛИ ОТКРЫТО ОКНО ПОДТВЕРЖДЕНИЯ — ОБРАБАТЫВАЕМ ЕГО
+        if (showResetConfirm) {
+            val dialogWidth = 600f
+            val dialogHeight = 350f
+            val dialogX = (width - dialogWidth) / 2
+            val dialogY = (height - dialogHeight) / 2
+            val btnWidth = 160f
+            val btnHeight = 60f
+            val btnY = dialogY + 240f
+
+            // Кнопка "ДА"
+            if (x > dialogX + 50f && x < dialogX + 50f + btnWidth &&
+                y > btnY && y < btnY + btnHeight) {
+                showResetConfirm = false
+                onResetStats()  // ← вызываем сброс
+                return true
+            }
+
+            // Кнопка "НЕТ"
+            if (x > dialogX + dialogWidth - btnWidth - 50f && x < dialogX + dialogWidth - 50f &&
+                y > btnY && y < btnY + btnHeight) {
+                showResetConfirm = false
+                return true
+            }
+            return true
+        }
+
+        // ⭐ КНОПКА ЗАКРЫТИЯ
         val closeX = width - 40f
         val closeY = 45f
         val halfSize = 40f
@@ -232,10 +452,19 @@ class StatsScreen {
             return true
         }
 
+        // ⭐ КНОПКА СБРОСА (внизу экрана)
+        val resetY = STATS_START_Y + STATS_COUNT * STAT_ITEM_HEIGHT + 30f
+
+        if (x > width / 2 - RESET_BTN_WIDTH / 2 && x < width / 2 + RESET_BTN_WIDTH / 2 &&
+            y > resetY + 5f && y < resetY + 5f + RESET_BTN_HEIGHT) {
+            if (player.gold >= 1000) {
+                showResetConfirm = true  // ← показываем окно подтверждения
+            }
+            return true
+        }
+
         // Проверяем кнопки "+" для каждой характеристики
         if (player.skillPoints > 0) {
-            val startY = 220f
-            val itemHeight = 70f
             val stats = listOf(
                 Player.StatType.STRENGTH,
                 Player.StatType.ENDURANCE,
@@ -245,8 +474,7 @@ class StatsScreen {
             )
 
             for ((index, statType) in stats.withIndex()) {
-                val btnY = startY + index * itemHeight
-                // Кнопка "+" находится справа
+                val btnY = STATS_START_Y + index * STAT_ITEM_HEIGHT
                 if (x > width - 100f && x < width - 45f &&
                     y > btnY + 10f && y < btnY + 60f) {
                     onUpgrade(statType)
@@ -254,7 +482,7 @@ class StatsScreen {
                 }
             }
         }
-
         return false
     }
+
 }

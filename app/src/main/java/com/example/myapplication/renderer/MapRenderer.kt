@@ -79,6 +79,15 @@ object MapRenderer {
         paint.textSize = 18f
         canvas.drawText("🏰 Замок", castleX, castleY + 10f, paint)
 
+        // ⭐ 6. ПУСТЫНЯ (справа от Пустоши, чуть ниже)
+        val desertX = centerX + 400f * mapScale
+        val desertY = centerY - 30f * mapScale  // ← чуть ниже пустоши
+        paint.color = Color.rgb(200, 180, 100)
+        canvas.drawCircle(desertX, desertY, 70f * mapScale, paint)
+        paint.color = Color.WHITE
+        paint.textSize = 18f
+        canvas.drawText("🏜️ Пустыня", desertX, desertY + 10f, paint)
+
         // ===== ПОДСВЕТКА ТЕКУЩЕЙ ЛОКАЦИИ =====
         val currentPos = when (locationManager.currentLocation) {
             LocationManager.Location.CITY -> cityX to cityY
@@ -86,6 +95,7 @@ object MapRenderer {
             LocationManager.Location.WASTELAND -> wasteX to wasteY
             LocationManager.Location.ROCKS -> rocksX to rocksY
             LocationManager.Location.CASTLE -> castleX to castleY
+            LocationManager.Location.DESERT -> desertX to desertY  // ← ДОБАВИЛИ
         }
         val markerPaint = Paint().apply {
             color = Color.YELLOW
@@ -150,6 +160,15 @@ object MapRenderer {
             10f, 10f, btnPaint
         )
         canvas.drawText("🏰 Замок", castleBtnX + 100f, castleBtnY + 35f, btnTextPaint)
+
+        // ⭐ Кнопка "Пустыня" (справа от Пустоши, чуть ниже)
+        val desertBtnX = centerX + 400f * mapScale - 100f
+        val desertBtnY = centerY + 150f + 70f  // ← ниже пустоши
+        canvas.drawRoundRect(
+            RectF(desertBtnX, desertBtnY, desertBtnX + 200f, desertBtnY + 50f),
+            10f, 10f, btnPaint
+        )
+        canvas.drawText("🏜️ Пустыня", desertBtnX + 100f, desertBtnY + 35f, btnTextPaint)
 
         // ===== ПОДПИСЬ =====
         val hintPaint = Paint().apply {
@@ -226,12 +245,21 @@ object MapRenderer {
             return true
         }
 
-        // ⭐ Кнопка "Замок"
+        // Кнопка "Замок"
         val castleBtnX = centerX - 550f * mapScale - 100f
         val castleBtnY = centerY + 150f
         if (x > castleBtnX && x < castleBtnX + 200f &&
             y > castleBtnY && y < castleBtnY + 50f) {
             onTeleport(LocationManager.Location.CASTLE)
+            return true
+        }
+
+        // ⭐ Кнопка "Пустыня" (НОВАЯ)
+        val desertBtnX = centerX + 400f * mapScale - 100f
+        val desertBtnY = centerY + 150f + 70f
+        if (x > desertBtnX && x < desertBtnX + 200f &&
+            y > desertBtnY && y < desertBtnY + 50f) {
+            onTeleport(LocationManager.Location.DESERT)
             return true
         }
 

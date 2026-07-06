@@ -69,8 +69,13 @@ class SpriteManager(private val context: Context) {
         loadSpriteSheet("steel_knight", "steel_knight.json")
         loadSpriteSheet("steel_knight_battle", "steel_knight.json")
         loadSpriteSheet("goblin", "goblin.json")
+        loadSpriteSheet("monk", "monk.json")
+        loadSpriteSheet("ork", "ork.json")
+        loadSpriteSheet("troll", "troll.json")
 
         loadSpriteSheet("character_zombie", "character_zombie.json")
+
+        loadSpriteSheet("armor_items", "armor_items.json")
     }
 
     private fun loadSpriteSheet(spriteName: String, jsonFileName: String) {
@@ -175,6 +180,39 @@ class SpriteManager(private val context: Context) {
                     animMap["attack"] = Animation(allFrames, 6)
                 }
                 "goblin" -> {
+                    val idleFrames = allFrames.filter { it.startsWith("idle_") }
+                    val walkLeftFrames = allFrames.filter { it.startsWith("walk_left_") }
+                    val walkRightFrames = allFrames.filter { it.startsWith("walk_right_") }
+                    val attackFrames = allFrames.filter { it.startsWith("attack_") }
+
+                    animMap["idle"] = Animation(idleFrames, 10)
+                    animMap["walk_left"] = Animation(walkLeftFrames, 8)
+                    animMap["walk_right"] = Animation(walkRightFrames, 8)
+                    animMap["attack"] = Animation(attackFrames, 2)
+                }
+                "monk" -> {
+                    val idleFrames = allFrames.filter { it.startsWith("idle_") }
+                    val walkLeftFrames = allFrames.filter { it.startsWith("walk_left_") }
+                    val walkRightFrames = allFrames.filter { it.startsWith("walk_right_") }
+                    val attackFrames = allFrames.filter { it.startsWith("attack_") }
+
+                    animMap["idle"] = Animation(idleFrames, 10)
+                    animMap["walk_left"] = Animation(walkLeftFrames, 8)
+                    animMap["walk_right"] = Animation(walkRightFrames, 8)
+                    animMap["attack"] = Animation(attackFrames, 2)
+                }
+                "ork" -> {
+                    val idleFrames = allFrames.filter { it.startsWith("idle_") }
+                    val walkLeftFrames = allFrames.filter { it.startsWith("walk_left_") }
+                    val walkRightFrames = allFrames.filter { it.startsWith("walk_right_") }
+                    val attackFrames = allFrames.filter { it.startsWith("attack_") }
+
+                    animMap["idle"] = Animation(idleFrames, 10)
+                    animMap["walk_left"] = Animation(walkLeftFrames, 8)
+                    animMap["walk_right"] = Animation(walkRightFrames, 8)
+                    animMap["attack"] = Animation(attackFrames, 2)
+                }
+                "troll" -> {
                     val idleFrames = allFrames.filter { it.startsWith("idle_") }
                     val walkLeftFrames = allFrames.filter { it.startsWith("walk_left_") }
                     val walkRightFrames = allFrames.filter { it.startsWith("walk_right_") }

@@ -84,7 +84,7 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
         spriteManager = SpriteManager(context)
         GameRenderer.loadBackgrounds(context)
         statsScreen = StatsScreen()
-        inventoryScreen = InventoryScreen(context)
+        inventoryScreen = InventoryScreen(context, spriteManager)
         saveManager = SaveManager(context)
 
         loadGame()
@@ -258,6 +258,15 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
                     player.targetX = player.x
                     bossOnMap = false
                     showMessage("⛰️ Вы вернулись в Скалы!")
+                }
+            }
+            LocationManager.Location.DESERT -> {
+                if (player.x < 60f) {
+                    locationManager.moveTo(LocationManager.Location.WASTELAND)
+                    player.x = worldWidth - 60f
+                    player.targetX = player.x
+                    bossOnMap = false
+                    showMessage("🏜️ Вы вернулись в Пустошь!")
                 }
             }
         }
@@ -435,7 +444,8 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
                         screenHeight,
                         player,
                         { statType -> upgradeStat(statType) },
-                        { closeStats() }
+                        { closeStats() },
+                        { resetStats() }
                     )
                 }
                 GameState.INVENTORY -> {
@@ -563,6 +573,9 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
             }
             LocationManager.Location.CASTLE -> {
                 canvas.drawText("← ⛰️", 30f - cameraManager.x, screenHeight / 2, arrowPaint)
+            }
+            LocationManager.Location.DESERT -> {
+                canvas.drawText("← 🏜️", 30f - cameraManager.x, screenHeight / 2, arrowPaint)
             }
         }
     }
@@ -734,16 +747,57 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
         canvas.drawText("🎒 Инвентарь", btnLeft + btnWidth / 2, 20f + btnHeight * 2.5f + 20f + 8f, invTextPaint)
 
         // ----- СТАТИСТИКА -----
+        // Чёрный фон для читаемости
+        val bgStatPaint = Paint().apply {
+            color = Color.argb(180, 0, 0, 0)
+            style = Paint.Style.FILL
+        }
+        canvas.drawRoundRect(
+            RectF(10f, 20f, 450f, 160f),  // ← увеличил ширину и высоту
+            15f, 15f, bgStatPaint
+        )
+
+        // Белая рамка
+        val borderStatPaint = Paint().apply {
+            color = Color.argb(100, 255, 255, 255)
+            style = Paint.Style.STROKE
+            strokeWidth = 2f
+        }
+        canvas.drawRoundRect(
+            RectF(10f, 20f, 450f, 160f),
+            15f, 15f, borderStatPaint
+        )
+
+        // ⭐ ТЕКСТ — УВЕЛИЧЕН В 3 РАЗА, ЖИРНЫЙ, ЧЁРНЫЙ
         val statPaint = Paint().apply {
-            color = Color.WHITE
-            textSize = 20f
+            color = Color.WHITE  // ← белый текст на чёрном фоне
+            textSize = 36f       // ← было 20f, стало 36f (почти в 2 раза)
             textAlign = Paint.Align.LEFT
             typeface = Typeface.DEFAULT_BOLD
+            isAntiAlias = true
         }
+
         val mobCount = locationData.mobs.count { !it.isDead }
-        canvas.drawText("❤️ HP: ${player.hp.toInt()}/${player.calculateMaxHp().toInt()}", 20f, 40f, statPaint)
-        canvas.drawText("⭐ Ур.${player.level} | Опыт: ${player.exp}/${player.maxExp} | 🎯 Очки: ${player.skillPoints}", 20f, 70f, statPaint)
-        canvas.drawText("👾 Мобы: $mobCount", 20f, 100f, statPaint)
+
+        // Строка 1: HP
+        canvas.drawText(
+            "❤️ HP: ${player.hp.toInt()}/${player.calculateMaxHp().toInt()}",
+            25f, 65f, statPaint  // ← увеличены отступы
+        )
+
+        // Строка 2: Уровень и опыт
+        statPaint.textSize = 32f  // ← чуть меньше для второй строки
+        canvas.drawText(
+            "⭐ Ур.${player.level} | Опыт: ${player.exp}/${player.maxExp}",
+            25f, 105f, statPaint
+        )
+
+        // Строка 3: Мобы и очки
+        statPaint.textSize = 28f
+        canvas.drawText(
+            "👾 Мобы: $mobCount | 🎯 Очки: ${player.skillPoints}",
+            25f, 140f, statPaint
+        )
 
         // Сообщение
         if (messageTimer > 0) {
@@ -758,9 +812,10 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
 
         // Подсказка
         val hintPaint = Paint().apply {
-            color = Color.argb(150, 255, 255, 255)
-            textSize = 16f
+            color = Color.argb(180, 255, 255, 255)
+            textSize = 18f
             textAlign = Paint.Align.LEFT
+            typeface = Typeface.DEFAULT_BOLD
         }
         canvas.drawText("🖱 Тап - движение | Двойной тап по мобу - бой", 20f, screenHeight - 30f, hintPaint)
     }
@@ -778,7 +833,8 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
                 statsScreen.handleTouch(
                     x, y, screenWidth, screenHeight, player,
                     { statType -> upgradeStat(statType) },
-                    { closeStats() }
+                    { closeStats() },
+                    { resetStats() }
                 )
                 return true
             }
@@ -1056,5 +1112,39 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
             respawnEffectX = bossX - cameraManager.x
             respawnEffectY = bossY - cameraManager.y
         }
+    }
+
+    // ⭐ МЕТОД СБРОСА ХАРАКТЕРИСТИК
+    private fun resetStats() {
+        // Проверяем, хватает ли золота
+        if (player.gold < 1000) {
+            showMessage("❌ Недостаточно золота! Нужно 1000 💰")
+            return
+        }
+
+        // Списываем золото
+        player.gold -= 1000
+
+        // Суммируем все очки характеристик
+        val totalPoints = player.strength + player.endurance +
+                player.agility + player.dexterity + player.luck
+
+        // Сбрасываем характеристики до базовых (5)
+        player.strength = 5
+        player.endurance = 5
+        player.agility = 5
+        player.dexterity = 5
+        player.luck = 5
+
+        // Возвращаем все очки как очки прокачки
+        // Вычитаем базовые 5*5=25 очков
+        player.skillPoints += (totalPoints - 25)
+
+        // Восстанавливаем HP (так как выносливость изменилась)
+        player.hp = player.calculateMaxHp()
+
+        showMessage("🔄 Характеристики сброшены! +${player.skillPoints} очков прокачки!")
+        saveGame()
+        println("🔄 Сброс характеристик: возвращено ${player.skillPoints} очков")
     }
 }

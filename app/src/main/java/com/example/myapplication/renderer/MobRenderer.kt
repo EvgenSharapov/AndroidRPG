@@ -16,7 +16,7 @@ object MobRenderer {
         if (mob.isDead) return
 
         val sizeMultiplier = if (mob.isBoss) 3.0f else 1.0f
-        val baseSize = 25f * sizeMultiplier
+        val baseSize = 45f * sizeMultiplier
 
         // Тень
         val shadowPaint = Paint().apply {
@@ -28,7 +28,7 @@ object MobRenderer {
         if (mob.isBoss) {
             val glowPaint = Paint().apply {
                 shader = RadialGradient(
-                    drawX, drawY, 120f,
+                    drawX, drawY, 180f,
                     Color.argb(80, 255, 215, 0),
                     Color.TRANSPARENT,
                     Shader.TileMode.CLAMP
@@ -46,6 +46,9 @@ object MobRenderer {
             4 -> drawSlimeGreenOnMap(canvas, drawX, drawY, mob, gameView, sizeMultiplier)
             5 -> drawSteelKnightOnMap(canvas, drawX, drawY, mob, gameView, sizeMultiplier)
             6 -> drawGoblinOnMap(canvas, drawX, drawY, mob, gameView, sizeMultiplier)
+            7 -> drawMonkOnMap(canvas, drawX, drawY, mob, gameView, sizeMultiplier)
+            8 -> drawOrkOnMap(canvas, drawX, drawY, mob, gameView, sizeMultiplier)
+            9 -> drawTrollOnMap(canvas, drawX, drawY, mob, gameView, sizeMultiplier)
             else -> drawDefault(canvas, drawX, drawY, sizeMultiplier)
         }
 
@@ -53,7 +56,7 @@ object MobRenderer {
 
         if (mob.isBoss) {
             val crownPaint = Paint().apply {
-                textSize = 40f * sizeMultiplier
+                textSize = 50f * sizeMultiplier
                 textAlign = Paint.Align.CENTER
             }
             canvas.drawText("👑", drawX, drawY - baseSize - 30f * sizeMultiplier, crownPaint)
@@ -100,8 +103,8 @@ object MobRenderer {
             val frameIndex = (System.currentTimeMillis() / 300 % animationFrames.size).toInt()
             val currentFrame = animationFrames[frameIndex]
 
-            val displayWidth = 60f * sizeMultiplier
-            val displayHeight = 60f * sizeMultiplier
+            val displayWidth = 100f * sizeMultiplier
+            val displayHeight = 100f * sizeMultiplier
 
             val dstRect = RectF(
                 x - displayWidth / 2,
@@ -153,8 +156,8 @@ object MobRenderer {
             val frameIndex = (System.currentTimeMillis() / 300 % animationFrames.size).toInt()
             val currentFrame = animationFrames[frameIndex]
 
-            val displayWidth = 60f * sizeMultiplier
-            val displayHeight = 60f * sizeMultiplier
+            val displayWidth = 100f * sizeMultiplier
+            val displayHeight = 100f * sizeMultiplier
 
             val dstRect = RectF(
                 x - displayWidth / 2,
@@ -216,8 +219,8 @@ object MobRenderer {
             val frameIndex = (System.currentTimeMillis() / 300 % animationFrames.size).toInt()
             val currentFrame = animationFrames[frameIndex]
 
-            val displayWidth = 60f * sizeMultiplier
-            val displayHeight = 60f * sizeMultiplier
+            val displayWidth = 100f * sizeMultiplier
+            val displayHeight = 100f * sizeMultiplier
 
             val dstRect = RectF(
                 x - displayWidth / 2,
@@ -270,8 +273,8 @@ object MobRenderer {
         if (animationFrames.isNotEmpty()) {
             val frameIndex = (System.currentTimeMillis() / 300 % animationFrames.size).toInt()
             val currentFrame = animationFrames[frameIndex]
-            val displayWidth = 60f * sizeMultiplier
-            val displayHeight = 60f * sizeMultiplier
+            val displayWidth = 100f * sizeMultiplier
+            val displayHeight = 100f * sizeMultiplier
             val dstRect = RectF(x - displayWidth / 2, y - displayHeight / 2, x + displayWidth / 2, y + displayHeight / 2)
             val spriteSheet = gameView.getMobSpriteSheet("red_knight")
             if (spriteSheet != null) {
@@ -309,8 +312,8 @@ object MobRenderer {
         if (animationFrames.isNotEmpty()) {
             val frameIndex = (System.currentTimeMillis() / 300 % animationFrames.size).toInt()
             val currentFrame = animationFrames[frameIndex]
-            val displayWidth = 60f * sizeMultiplier
-            val displayHeight = 60f * sizeMultiplier
+            val displayWidth = 100f * sizeMultiplier
+            val displayHeight = 100f * sizeMultiplier
             val dstRect = RectF(x - displayWidth / 2, y - displayHeight / 2, x + displayWidth / 2, y + displayHeight / 2)
             val spriteSheet = gameView.getMobSpriteSheet("slime_green")
             if (spriteSheet != null) {
@@ -352,8 +355,8 @@ object MobRenderer {
         if (animationFrames.isNotEmpty()) {
             val frameIndex = (System.currentTimeMillis() / 300 % animationFrames.size).toInt()
             val currentFrame = animationFrames[frameIndex]
-            val displayWidth = 60f * sizeMultiplier
-            val displayHeight = 60f * sizeMultiplier
+            val displayWidth = 100f * sizeMultiplier
+            val displayHeight = 100f * sizeMultiplier
             val dstRect = RectF(x - displayWidth / 2, y - displayHeight / 2, x + displayWidth / 2, y + displayHeight / 2)
             val spriteSheet = gameView.getMobSpriteSheet("steel_knight")
             if (spriteSheet != null) {
@@ -391,8 +394,8 @@ object MobRenderer {
         if (animationFrames.isNotEmpty()) {
             val frameIndex = (System.currentTimeMillis() / 300 % animationFrames.size).toInt()
             val currentFrame = animationFrames[frameIndex]
-            val displayWidth = 60f * sizeMultiplier
-            val displayHeight = 60f * sizeMultiplier
+            val displayWidth = 100f * sizeMultiplier
+            val displayHeight = 100f * sizeMultiplier
             val dstRect = RectF(x - displayWidth / 2, y - displayHeight / 2, x + displayWidth / 2, y + displayHeight / 2)
             val spriteSheet = gameView.getMobSpriteSheet("goblin")
             if (spriteSheet != null) {
@@ -405,6 +408,53 @@ object MobRenderer {
         }
     }
 
+    // монах
+    private fun drawMonkOnMap(canvas: Canvas, x: Float, y: Float, mob: Mob, gameView: GameView?, sizeMultiplier: Float = 1f) {
+        if (gameView == null) {
+            drawFallbackMonk(canvas, x, y, sizeMultiplier)
+            return
+        }
+
+        val animationFrames = gameView.getMobAnimationFrames("monk", "idle")
+
+        if (animationFrames.isNotEmpty()) {
+            val frameIndex = (System.currentTimeMillis() / 300 % animationFrames.size).toInt()
+            val currentFrame = animationFrames[frameIndex]
+            val displayWidth = 100f * sizeMultiplier
+            val displayHeight = 100f * sizeMultiplier
+
+            val dstRect = RectF(
+                x - displayWidth / 2,
+                y - displayHeight / 2,
+                x + displayWidth / 2,
+                y + displayHeight / 2
+            )
+
+            val spriteSheet = gameView.getMobSpriteSheet("monk")
+            if (spriteSheet != null) {
+                canvas.drawBitmap(spriteSheet, currentFrame, dstRect, null)
+            } else {
+                drawFallbackMonk(canvas, x, y, sizeMultiplier)
+            }
+        } else {
+            drawFallbackMonk(canvas, x, y, sizeMultiplier)
+        }
+    }
+
+    private fun drawFallbackMonk(canvas: Canvas, x: Float, y: Float, sizeMultiplier: Float = 1f) {
+        val radius = 25f * sizeMultiplier
+        paint.color = Color.rgb(200, 180, 100)
+        canvas.drawCircle(x, y, radius, paint)
+        paint.color = Color.WHITE
+        canvas.drawCircle(x - 8f * sizeMultiplier, y - 6f * sizeMultiplier, 6f * sizeMultiplier, paint)
+        canvas.drawCircle(x + 8f * sizeMultiplier, y - 6f * sizeMultiplier, 6f * sizeMultiplier, paint)
+        paint.color = Color.BLACK
+        canvas.drawCircle(x - 10f * sizeMultiplier, y - 6f * sizeMultiplier, 3f * sizeMultiplier, paint)
+        canvas.drawCircle(x + 6f * sizeMultiplier, y - 6f * sizeMultiplier, 3f * sizeMultiplier, paint)
+        paint.color = Color.rgb(255, 100, 50)
+        canvas.drawCircle(x, y - 20f * sizeMultiplier, 4f * sizeMultiplier, paint)
+    }
+
     private fun drawFallbackGoblin(canvas: Canvas, x: Float, y: Float, sizeMultiplier: Float = 1f) {
         val radius = 25f * sizeMultiplier
         paint.color = Color.rgb(50, 180, 50)
@@ -415,6 +465,106 @@ object MobRenderer {
         paint.color = Color.BLACK
         canvas.drawCircle(x - 10f * sizeMultiplier, y - 6f * sizeMultiplier, 3f * sizeMultiplier, paint)
         canvas.drawCircle(x + 6f * sizeMultiplier, y - 6f * sizeMultiplier, 3f * sizeMultiplier, paint)
+    }
+
+    // ===== ОРК НА КАРТЕ =====
+    private fun drawOrkOnMap(canvas: Canvas, x: Float, y: Float, mob: Mob, gameView: GameView?, sizeMultiplier: Float = 1f) {
+        if (gameView == null) {
+            drawFallbackOrk(canvas, x, y, sizeMultiplier)
+            return
+        }
+
+        val animationFrames = gameView.getMobAnimationFrames("ork", "idle")
+
+        if (animationFrames.isNotEmpty()) {
+            val frameIndex = (System.currentTimeMillis() / 300 % animationFrames.size).toInt()
+            val currentFrame = animationFrames[frameIndex]
+            val displayWidth = 100f * sizeMultiplier
+            val displayHeight = 100f * sizeMultiplier
+
+            val dstRect = RectF(
+                x - displayWidth / 2,
+                y - displayHeight / 2,
+                x + displayWidth / 2,
+                y + displayHeight / 2
+            )
+
+            val spriteSheet = gameView.getMobSpriteSheet("ork")
+            if (spriteSheet != null) {
+                canvas.drawBitmap(spriteSheet, currentFrame, dstRect, null)
+            } else {
+                drawFallbackOrk(canvas, x, y, sizeMultiplier)
+            }
+        } else {
+            drawFallbackOrk(canvas, x, y, sizeMultiplier)
+        }
+    }
+
+    private fun drawFallbackOrk(canvas: Canvas, x: Float, y: Float, sizeMultiplier: Float = 1f) {
+        val radius = 25f * sizeMultiplier
+        paint.color = Color.rgb(100, 180, 80)
+        canvas.drawCircle(x, y, radius, paint)
+        paint.color = Color.WHITE
+        canvas.drawCircle(x - 8f * sizeMultiplier, y - 6f * sizeMultiplier, 6f * sizeMultiplier, paint)
+        canvas.drawCircle(x + 8f * sizeMultiplier, y - 6f * sizeMultiplier, 6f * sizeMultiplier, paint)
+        paint.color = Color.BLACK
+        canvas.drawCircle(x - 10f * sizeMultiplier, y - 6f * sizeMultiplier, 3f * sizeMultiplier, paint)
+        canvas.drawCircle(x + 6f * sizeMultiplier, y - 6f * sizeMultiplier, 3f * sizeMultiplier, paint)
+        // Клыки орка
+        paint.color = Color.WHITE
+        paint.strokeWidth = 3f * sizeMultiplier
+        canvas.drawLine(x - 6f * sizeMultiplier, y + 8f * sizeMultiplier, x - 10f * sizeMultiplier, y + 16f * sizeMultiplier, paint)
+        canvas.drawLine(x + 6f * sizeMultiplier, y + 8f * sizeMultiplier, x + 10f * sizeMultiplier, y + 16f * sizeMultiplier, paint)
+    }
+
+    // ===== ТРОЛЛЬ НА КАРТЕ =====
+    private fun drawTrollOnMap(canvas: Canvas, x: Float, y: Float, mob: Mob, gameView: GameView?, sizeMultiplier: Float = 1f) {
+        if (gameView == null) {
+            drawFallbackTroll(canvas, x, y, sizeMultiplier)
+            return
+        }
+
+        val animationFrames = gameView.getMobAnimationFrames("troll", "idle")
+
+        if (animationFrames.isNotEmpty()) {
+            val frameIndex = (System.currentTimeMillis() / 300 % animationFrames.size).toInt()
+            val currentFrame = animationFrames[frameIndex]
+            val displayWidth = 120f * sizeMultiplier  // Тролль чуть больше
+            val displayHeight = 120f * sizeMultiplier
+
+            val dstRect = RectF(
+                x - displayWidth / 2,
+                y - displayHeight / 2,
+                x + displayWidth / 2,
+                y + displayHeight / 2
+            )
+
+            val spriteSheet = gameView.getMobSpriteSheet("troll")
+            if (spriteSheet != null) {
+                canvas.drawBitmap(spriteSheet, currentFrame, dstRect, null)
+            } else {
+                drawFallbackTroll(canvas, x, y, sizeMultiplier)
+            }
+        } else {
+            drawFallbackTroll(canvas, x, y, sizeMultiplier)
+        }
+    }
+
+    private fun drawFallbackTroll(canvas: Canvas, x: Float, y: Float, sizeMultiplier: Float = 1f) {
+        val radius = 30f * sizeMultiplier
+        paint.color = Color.rgb(150, 100, 200)
+        canvas.drawCircle(x, y, radius, paint)
+        paint.color = Color.WHITE
+        canvas.drawCircle(x - 10f * sizeMultiplier, y - 8f * sizeMultiplier, 8f * sizeMultiplier, paint)
+        canvas.drawCircle(x + 10f * sizeMultiplier, y - 8f * sizeMultiplier, 8f * sizeMultiplier, paint)
+        paint.color = Color.BLACK
+        canvas.drawCircle(x - 12f * sizeMultiplier, y - 8f * sizeMultiplier, 4f * sizeMultiplier, paint)
+        canvas.drawCircle(x + 8f * sizeMultiplier, y - 8f * sizeMultiplier, 4f * sizeMultiplier, paint)
+        // Рога тролля
+        paint.color = Color.rgb(180, 180, 200)
+        paint.strokeWidth = 4f * sizeMultiplier
+        canvas.drawLine(x - 14f * sizeMultiplier, y - 20f * sizeMultiplier, x - 20f * sizeMultiplier, y - 40f * sizeMultiplier, paint)
+        canvas.drawLine(x + 14f * sizeMultiplier, y - 20f * sizeMultiplier, x + 20f * sizeMultiplier, y - 40f * sizeMultiplier, paint)
     }
 
     // ===== HP BAR (УВЕЛИЧЕННЫЙ ДЛЯ БОССА) =====

@@ -37,6 +37,9 @@ class BattleRenderer {
         private var isSlimeGreenAttacking = false
         private var isSteelKnightAttacking = false
         private var isGoblinAttacking = false
+        private var isMonkAttacking = false
+        private var isOrkAttacking = false
+        private var isTrollAttacking = false
         private var attackAnimTimerMob = 0
         private var attackFrameIndex = 0
 
@@ -149,6 +152,8 @@ class BattleRenderer {
                     isSlimeGreenAttacking -> 6
                     isSteelKnightAttacking -> 8
                     isGoblinAttacking -> 8
+                    isOrkAttacking -> 8
+                    isTrollAttacking -> 8
                     else -> 6
                 }
 
@@ -161,6 +166,7 @@ class BattleRenderer {
                     isSlimeGreenAttacking = false
                     isSteelKnightAttacking = false
                     isGoblinAttacking = false
+                    isMonkAttacking = false
                     attackAnimTimerMob = 0
                     attackFrameIndex = 0
                 }
@@ -286,7 +292,6 @@ class BattleRenderer {
 
         // ===== РИСОВАНИЕ МОБА =====
         private fun drawMobBattle(canvas: Canvas, x: Float, y: Float, mob: com.example.myapplication.model.Mob, gameView: GameView) {
-            println("⚔️ drawMobBattle() для ${mob.getTypeName()} (тип ${mob.type})")
             val bossScale = if (mob.isBoss) 1.8f else 1f
             val scale = 2.5f * bossScale
 
@@ -340,6 +345,9 @@ class BattleRenderer {
                 4 -> drawSlimeGreenBattle(canvas, finalX, finalY, scale, gameView)
                 5 -> drawSteelKnightBattle(canvas, finalX, finalY, scale, gameView)
                 6 -> drawGoblinBattle(canvas, finalX, finalY, scale, gameView)
+                7 -> drawMonkBattle(canvas, finalX, finalY, scale, gameView)
+                8 -> drawOrkBattle(canvas, finalX, finalY, scale, gameView)
+                9 -> drawTrollBattle(canvas, finalX, finalY, scale, gameView)
             }
 
             // Корона для босса
@@ -702,6 +710,155 @@ class BattleRenderer {
             canvas.drawCircle(x + 17f * scale, y - 15f * scale, 7f * scale, paint)
         }
 
+        private fun drawMonkBattle(canvas: Canvas, x: Float, y: Float, scale: Float, gameView: GameView) {
+            val animName = if (isMonkAttacking) "attack" else "idle"
+            val animationFrames = gameView.getMobAnimationFrames("monk", animName)
+
+            if (animationFrames.isNotEmpty()) {
+                val frameIndex = if (isMonkAttacking) {
+                    attackFrameIndex % animationFrames.size
+                } else {
+                    (System.currentTimeMillis() / 200 % animationFrames.size).toInt()
+                }
+                val currentFrame = animationFrames[frameIndex % animationFrames.size]
+
+                val battleScale = 2.5f
+                val displayWidth = 80f * scale * battleScale
+                val displayHeight = 80f * scale * battleScale
+
+                val dstRect = RectF(
+                    x - displayWidth / 2,
+                    y - displayHeight / 2,
+                    x + displayWidth / 2,
+                    y + displayHeight / 2
+                )
+
+                val spriteSheet = gameView.getMobSpriteSheet("monk")
+                if (spriteSheet != null) {
+                    canvas.drawBitmap(spriteSheet, currentFrame, dstRect, null)
+                } else {
+                    drawFallbackMonkBattle(canvas, x, y, scale)
+                }
+            } else {
+                drawFallbackMonkBattle(canvas, x, y, scale)
+            }
+        }
+
+        private fun drawFallbackMonkBattle(canvas: Canvas, x: Float, y: Float, scale: Float) {
+            paint.color = Color.rgb(200, 180, 100)
+            canvas.drawCircle(x, y, 60f * scale, paint)
+            paint.color = Color.WHITE
+            canvas.drawCircle(x - 20f * scale, y - 15f * scale, 14f * scale, paint)
+            canvas.drawCircle(x + 20f * scale, y - 15f * scale, 14f * scale, paint)
+            paint.color = Color.BLACK
+            canvas.drawCircle(x - 23f * scale, y - 15f * scale, 7f * scale, paint)
+            canvas.drawCircle(x + 17f * scale, y - 15f * scale, 7f * scale, paint)
+            paint.color = Color.rgb(255, 100, 50)
+            canvas.drawCircle(x, y - 35f * scale, 8f * scale, paint)
+        }
+
+        // ===== ОРК (БОЙ) =====
+        private fun drawOrkBattle(canvas: Canvas, x: Float, y: Float, scale: Float, gameView: GameView) {
+            val animName = if (isOrkAttacking) "attack" else "idle"
+            val animationFrames = gameView.getMobAnimationFrames("ork", animName)
+
+            if (animationFrames.isNotEmpty()) {
+                val frameIndex = if (isOrkAttacking) {
+                    attackFrameIndex % animationFrames.size
+                } else {
+                    (System.currentTimeMillis() / 200 % animationFrames.size).toInt()
+                }
+                val currentFrame = animationFrames[frameIndex % animationFrames.size]
+
+                val battleScale = 2.5f
+                val displayWidth = 80f * scale * battleScale
+                val displayHeight = 80f * scale * battleScale
+
+                val dstRect = RectF(
+                    x - displayWidth / 2,
+                    y - displayHeight / 2,
+                    x + displayWidth / 2,
+                    y + displayHeight / 2
+                )
+
+                val spriteSheet = gameView.getMobSpriteSheet("ork")
+                if (spriteSheet != null) {
+                    canvas.drawBitmap(spriteSheet, currentFrame, dstRect, null)
+                } else {
+                    drawFallbackOrkBattle(canvas, x, y, scale)
+                }
+            } else {
+                drawFallbackOrkBattle(canvas, x, y, scale)
+            }
+        }
+
+        private fun drawFallbackOrkBattle(canvas: Canvas, x: Float, y: Float, scale: Float) {
+            paint.color = Color.rgb(100, 180, 80)
+            canvas.drawCircle(x, y, 60f * scale, paint)
+            paint.color = Color.WHITE
+            canvas.drawCircle(x - 20f * scale, y - 15f * scale, 14f * scale, paint)
+            canvas.drawCircle(x + 20f * scale, y - 15f * scale, 14f * scale, paint)
+            paint.color = Color.BLACK
+            canvas.drawCircle(x - 23f * scale, y - 15f * scale, 7f * scale, paint)
+            canvas.drawCircle(x + 17f * scale, y - 15f * scale, 7f * scale, paint)
+            // Клыки
+            paint.color = Color.WHITE
+            paint.strokeWidth = 4f * scale
+            canvas.drawLine(x - 12f * scale, y + 16f * scale, x - 20f * scale, y + 30f * scale, paint)
+            canvas.drawLine(x + 12f * scale, y + 16f * scale, x + 20f * scale, y + 30f * scale, paint)
+        }
+
+        // ===== ТРОЛЛЬ (БОЙ) =====
+        private fun drawTrollBattle(canvas: Canvas, x: Float, y: Float, scale: Float, gameView: GameView) {
+            val animName = if (isTrollAttacking) "attack" else "idle"
+            val animationFrames = gameView.getMobAnimationFrames("troll", animName)
+
+            if (animationFrames.isNotEmpty()) {
+                val frameIndex = if (isTrollAttacking) {
+                    attackFrameIndex % animationFrames.size
+                } else {
+                    (System.currentTimeMillis() / 200 % animationFrames.size).toInt()
+                }
+                val currentFrame = animationFrames[frameIndex % animationFrames.size]
+
+                val battleScale = 2.8f  // Тролль чуть больше
+                val displayWidth = 80f * scale * battleScale
+                val displayHeight = 80f * scale * battleScale
+
+                val dstRect = RectF(
+                    x - displayWidth / 2,
+                    y - displayHeight / 2,
+                    x + displayWidth / 2,
+                    y + displayHeight / 2
+                )
+
+                val spriteSheet = gameView.getMobSpriteSheet("troll")
+                if (spriteSheet != null) {
+                    canvas.drawBitmap(spriteSheet, currentFrame, dstRect, null)
+                } else {
+                    drawFallbackTrollBattle(canvas, x, y, scale)
+                }
+            } else {
+                drawFallbackTrollBattle(canvas, x, y, scale)
+            }
+        }
+
+        private fun drawFallbackTrollBattle(canvas: Canvas, x: Float, y: Float, scale: Float) {
+            paint.color = Color.rgb(150, 100, 200)
+            canvas.drawCircle(x, y, 70f * scale, paint)
+            paint.color = Color.WHITE
+            canvas.drawCircle(x - 20f * scale, y - 15f * scale, 14f * scale, paint)
+            canvas.drawCircle(x + 20f * scale, y - 15f * scale, 14f * scale, paint)
+            paint.color = Color.BLACK
+            canvas.drawCircle(x - 23f * scale, y - 15f * scale, 7f * scale, paint)
+            canvas.drawCircle(x + 17f * scale, y - 15f * scale, 7f * scale, paint)
+            // Рога
+            paint.color = Color.rgb(180, 180, 200)
+            paint.strokeWidth = 5f * scale
+            canvas.drawLine(x - 25f * scale, y - 30f * scale, x - 35f * scale, y - 55f * scale, paint)
+            canvas.drawLine(x + 25f * scale, y - 30f * scale, x + 35f * scale, y - 55f * scale, paint)
+        }
+
         // ===== ЭФФЕКТЫ =====
         private fun drawHitEffects(canvas: Canvas) {
             if (hitEffectTimer > 0) {
@@ -863,6 +1020,9 @@ class BattleRenderer {
                 4 -> isSlimeGreenAttacking = true
                 5 -> isSteelKnightAttacking = true
                 6 -> isGoblinAttacking = true
+                7 -> isMonkAttacking = true
+                8 -> isOrkAttacking = true
+                9 -> isTrollAttacking = true
             }
         }
 
@@ -892,6 +1052,9 @@ class BattleRenderer {
             isSlimeGreenAttacking = false
             isSteelKnightAttacking = false
             isGoblinAttacking = false
+            isMonkAttacking = false
+            isOrkAttacking = false
+            isTrollAttacking = false
             mobKnockbackX = 0f
             mobKnockbackY = 0f
             attackAnimTimer = 0
