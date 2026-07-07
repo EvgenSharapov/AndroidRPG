@@ -1,6 +1,7 @@
 package com.example.myapplication.model
 
 data class Player(
+    var name: String = "Герой",
     var x: Float = 400f,
     var y: Float = 400f,
     var targetX: Float = 400f,

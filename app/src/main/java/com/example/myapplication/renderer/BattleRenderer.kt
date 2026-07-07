@@ -774,7 +774,7 @@ class BattleRenderer {
         // ===== ОРК (БОЙ) =====
         private fun drawOrkBattle(canvas: Canvas, x: Float, y: Float, scale: Float, gameView: GameView) {
             val animName = if (isOrkAttacking) "attack" else "idle"
-            val animationFrames = gameView.getMobAnimationFrames("ork", animName)
+            val animationFrames = gameView.getMobAnimationFrames("lizard", animName)
 
             if (animationFrames.isNotEmpty()) {
                 val frameIndex = if (isOrkAttacking) {
@@ -795,7 +795,7 @@ class BattleRenderer {
                     y + displayHeight / 2
                 )
 
-                val spriteSheet = gameView.getMobSpriteSheet("ork")
+                val spriteSheet = gameView.getMobSpriteSheet("lizard")
                 if (spriteSheet != null) {
                     canvas.drawBitmap(spriteSheet, currentFrame, dstRect, null)
                 } else {

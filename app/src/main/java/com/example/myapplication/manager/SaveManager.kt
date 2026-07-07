@@ -25,6 +25,7 @@ class SaveManager(context: Context) {
         private const val KEY_HP = "player_hp"
         private const val KEY_INVENTORY = "inventory_data"
         private const val KEY_EQUIPMENT = "equipment_data"
+        private const val KEY_PLAYER_NAME = "player_name"
     }
 
     /**
@@ -40,6 +41,7 @@ class SaveManager(context: Context) {
         editor.putInt(KEY_MAX_EXP, player.maxExp)
         editor.putInt(KEY_SKILL_POINTS, player.skillPoints)
         editor.putFloat(KEY_HP, player.hp)
+        editor.putString(KEY_PLAYER_NAME, player.name)
 
         // Характеристики
         editor.putInt(KEY_STRENGTH, player.strength)
@@ -84,7 +86,7 @@ class SaveManager(context: Context) {
             player.maxExp = prefs.getInt(KEY_MAX_EXP, 50)
             player.skillPoints = prefs.getInt(KEY_SKILL_POINTS, 0)
             player.hp = prefs.getFloat(KEY_HP, 100f)
-            println("💰 Загружено золото: ${player.gold}")
+            player.name = prefs.getString(KEY_PLAYER_NAME, "Герой") ?: "Герой"
 
             // ⭐ ХАРАКТЕРИСТИКИ
             player.strength = prefs.getInt(KEY_STRENGTH, 5)
