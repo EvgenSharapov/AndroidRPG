@@ -52,12 +52,24 @@ class SaveManager(context: Context) {
 
         // ⭐ ИНВЕНТАРЬ (сериализуем в JSON)
         val items = inventory.getItems()
+        // ⭐ ПРОВЕРЯЕМ, ЧТО У ВСЕХ ПРЕДМЕТОВ ИНИЦИАЛИЗИРОВАНЫ RUNES
+        for (item in items) {
+            if (item != null && item.runes == null) {
+                item.runes = mutableListOf()
+            }
+        }
         val itemsJson = gson.toJson(items)
         editor.putString(KEY_INVENTORY, itemsJson)
         println("📦 Инвентарь сохранён: ${items.count { it != null }} предметов")
 
         // ⭐ ЭКИПИРОВКА (сериализуем в JSON)
         val equipment = inventory.getAllEquipment()
+        // ⭐ ПРОВЕРЯЕМ РУНЫ В ЭКИПИРОВКЕ
+        for ((_, item) in equipment) {
+            if (item.runes == null) {
+                item.runes = mutableListOf()
+            }
+        }
         val equipmentJson = gson.toJson(equipment)
         editor.putString(KEY_EQUIPMENT, equipmentJson)
         println("⚔️ Экипировка сохранена: ${equipment.size} предметов")
@@ -66,9 +78,6 @@ class SaveManager(context: Context) {
         println("✅ Полный прогресс сохранён!")
     }
 
-    /**
-     * ПОЛНАЯ ЗАГРУЗКА (инвентарь + экипировка)
-     */
     /**
      * ПОЛНАЯ ЗАГРУЗКА (инвентарь + экипировка)
      */
@@ -101,6 +110,14 @@ class SaveManager(context: Context) {
                 try {
                     val type = object : TypeToken<List<Item?>>() {}.type
                     val loadedItems: List<Item?> = gson.fromJson(itemsJson, type)
+
+                    // ⭐ ИНИЦИАЛИЗИРУЕМ RUNES ДЛЯ КАЖДОГО ПРЕДМЕТА
+                    for (item in loadedItems) {
+                        if (item != null && item.runes == null) {
+                            item.runes = mutableListOf()
+                        }
+                    }
+
                     inventory.setItems(loadedItems)
                     println("📦 Загружено предметов: ${loadedItems.count { it != null }}")
                 } catch (e: Exception) {
@@ -114,6 +131,14 @@ class SaveManager(context: Context) {
                 try {
                     val type = object : TypeToken<Map<EquipmentSlot, Item>>() {}.type
                     val loadedEquipment: Map<EquipmentSlot, Item> = gson.fromJson(equipmentJson, type)
+
+                    // ⭐ ИНИЦИАЛИЗИРУЕМ RUNES ДЛЯ КАЖДОГО ПРЕДМЕТА В ЭКИПИРОВКЕ
+                    for ((_, item) in loadedEquipment) {
+                        if (item.runes == null) {
+                            item.runes = mutableListOf()
+                        }
+                    }
+
                     inventory.setEquipment(loadedEquipment)
                     println("⚔️ Загружено экипировки: ${loadedEquipment.size}")
                 } catch (e: Exception) {
@@ -129,5 +154,4 @@ class SaveManager(context: Context) {
             return false
         }
     }
-
 }

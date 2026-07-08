@@ -1,6 +1,7 @@
 package com.example.myapplication.ui
 
 import android.graphics.*
+import com.example.myapplication.model.Inventory
 import com.example.myapplication.model.Player
 
 class StatsScreen {
@@ -27,6 +28,9 @@ class StatsScreen {
         width: Float,
         height: Float,
         player: Player,
+        inventory: Inventory,
+        damage: Int,
+        defense: Int,
         onUpgrade: (Player.StatType) -> Unit,
         onClose: () -> Unit,
         onResetStats: () -> Unit
@@ -78,19 +82,22 @@ class StatsScreen {
             textAlign = Paint.Align.CENTER
         }
         canvas.drawText(
-            "❤️ HP: ${player.hp.toInt()}/${player.calculateMaxHp().toInt()}  ⚔️ Урон: ${player.getDamage().toInt()}",
+            "❤️ HP: ${player.hp.toInt()}/${player.calculateMaxHp().toInt()}  ⚔️ Урон: $damage",
             width / 2,
             155f,
             statsPaint
         )
+
         canvas.drawText(
-            "🛡️ Уворот: ${player.getDodgeChance().toInt()}%  🎯 Точность: ${player.getHitChance().toInt()}%  💥 Крит: ${player.getCritChance().toInt()}% (x${String.format("%.1f", player.getCritDamage())})",
+            "🛡️ Защита: $defense  💨 Уворот: ${player.getDodgeChance().toInt()}%  🎯 Точность: ${player.getHitChance().toInt()}%  💥 Крит: ${player.getCritChance().toInt()}% (x${String.format("%.1f", player.getCritDamage())})",
             width / 2,
             180f,
             statsPaint
         )
 
         // --- ХАРАКТЕРИСТИКИ ---
+        val startY = 220f
+        val itemHeight = 70f
         val stats = listOf(
             Triple(Player.StatType.STRENGTH, "💪 Сила", "Увеличивает урон"),
             Triple(Player.StatType.ENDURANCE, "❤️ Выносливость", "Увеличивает HP"),
@@ -100,14 +107,14 @@ class StatsScreen {
         )
 
         for ((index, stat) in stats.withIndex()) {
-            val y = STATS_START_Y + index * STAT_ITEM_HEIGHT
+            val y = startY + index * itemHeight
 
             // Фон строки
             val rowPaint = Paint().apply {
                 color = Color.argb(80, 255, 255, 255)
             }
             canvas.drawRoundRect(
-                RectF(30f, y, width - 30f, y + STAT_ITEM_HEIGHT),
+                RectF(30f, y, width - 30f, y + itemHeight),
                 12f, 12f, rowPaint
             )
 
@@ -171,7 +178,7 @@ class StatsScreen {
         }
 
         // ⭐ КНОПКА СБРОСА ХАРАКТЕРИСТИК (ВНИЗУ)
-        val resetY = STATS_START_Y + STATS_COUNT * STAT_ITEM_HEIGHT + 30f
+        val resetY = startY + stats.size * itemHeight + 30f
 
         // Фон для кнопки
         val resetBgPaint = Paint().apply {
@@ -189,8 +196,7 @@ class StatsScreen {
             style = Paint.Style.FILL
         }
         canvas.drawRoundRect(
-            RectF(width / 2 - RESET_BTN_WIDTH / 2, resetY + 5f,
-                width / 2 + RESET_BTN_WIDTH / 2, resetY + 5f + RESET_BTN_HEIGHT),
+            RectF(width / 2 - 150f, resetY + 5f, width / 2 + 150f, resetY + 65f),
             12f, 12f, resetBtnPaint
         )
 

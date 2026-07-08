@@ -5,6 +5,20 @@ import kotlin.random.Random
 
 /**
  * Менеджер дропа — управляет всеми дроп-таблицами для мобов
+ *
+ * Баланс предметов:
+ * - Оружие (WEAPON): только attack
+ * - Броня (HELMET, CHEST, PANTS, BOOTS, GLOVES, BRACERS): только defense
+ * - Щиты (SHIELD): defense
+ * - Аксессуары (RING, NECKLACE, WINGS): health + специальные статы
+ *
+ * Редкость → Статы:
+ * COMMON:    attack 3-5,   defense 2-3
+ * UNCOMMON:  attack 8-12,  defense 4-6
+ * RARE:      attack 16-22, defense 8-12
+ * EPIC:      attack 26-34, defense 14-20
+ * LEGENDARY: attack 38-48, defense 24-32
+ * MYTHIC:    attack 52-65, defense 36-45
  */
 class DropManager {
 
@@ -17,7 +31,7 @@ class DropManager {
 
     private fun initDrops() {
         // ============================================
-        // 1. ФЛАФФИ (тип 0)
+        // 1. ФЛАФФИ (тип 0) — уровни 1-9
         // ============================================
 
         // Уровень 1-2
@@ -33,7 +47,7 @@ class DropManager {
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.COMMON,
                         chance = 15.0,
-                        stats = ItemStats(attack = 3),
+                        stats = ItemStats(attack = 5),
                         description = "Старый ржавый меч"
                     ),
                     DropTable.DropEntry(
@@ -43,6 +57,16 @@ class DropManager {
                         rarity = ItemRarity.COMMON,
                         chance = 25.0,
                         description = "Восстанавливает 30 HP 🎂"
+                    ),
+                    // ⭐ ОРИДИКОН (редкий дроп)
+                    DropTable.DropEntry(
+                        itemId = "oridecon",
+                        itemName = "Оридикон",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 3.0,
+                        description = "Редкий минерал для заточки оружия ⛏️",
+                        quantity = 1
                     )
                 ),
                 goldMin = 1,
@@ -64,7 +88,7 @@ class DropManager {
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.UNCOMMON,
                         chance = 10.0,
-                        stats = ItemStats(attack = 7, strength = 1),
+                        stats = ItemStats(attack = 12),
                         description = "Прочный железный меч"
                     ),
                     DropTable.DropEntry(
@@ -74,6 +98,24 @@ class DropManager {
                         rarity = ItemRarity.UNCOMMON,
                         chance = 20.0,
                         description = "Восстанавливает 60 HP 🍰"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "oridecon",
+                        itemName = "Оридикон",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 5.0,
+                        description = "Редкий минерал для заточки оружия ⛏️",
+                        quantity = 1
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "elunium",
+                        itemName = "Элуниум",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 5.0,
+                        description = "Редкий минерал для заточки брони ⛏️",
+                        quantity = 1
                     )
                 ),
                 goldMin = 3,
@@ -82,7 +124,7 @@ class DropManager {
             )
         )
 
-        // Уровень 5-6 (редкий дроп)
+        // Уровень 5-6
         dropConfigs.add(
             MobDrop(
                 mobType = 0,
@@ -95,7 +137,7 @@ class DropManager {
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.RARE,
                         chance = 5.0,
-                        stats = ItemStats(attack = 12, strength = 2),
+                        stats = ItemStats(attack = 20),
                         description = "Качественный стальной меч"
                     ),
                     DropTable.DropEntry(
@@ -105,6 +147,24 @@ class DropManager {
                         rarity = ItemRarity.RARE,
                         chance = 20.0,
                         description = "Восстанавливает 120 HP 🎂"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "oridecon",
+                        itemName = "Оридикон",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 8.0,
+                        description = "Редкий минерал для заточки оружия ⛏️",
+                        quantity = 1
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "elunium",
+                        itemName = "Элуниум",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 8.0,
+                        description = "Редкий минерал для заточки брони ⛏️",
+                        quantity = 1
                     )
                 ),
                 goldMin = 6,
@@ -113,8 +173,57 @@ class DropManager {
             )
         )
 
+        // Уровень 7-9
+        dropConfigs.add(
+            MobDrop(
+                mobType = 0,
+                minLevel = 7,
+                maxLevel = 9,
+                dropTable = DropTable.createMixedDrop(
+                    DropTable.DropEntry(
+                        itemId = "sword_flame",
+                        itemName = "Пламенный меч",
+                        itemType = Item.ItemType.WEAPON,
+                        rarity = ItemRarity.EPIC,
+                        chance = 5.0,
+                        stats = ItemStats(attack = 30),
+                        description = "Меч, пылающий огнём"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "cake_large",
+                        itemName = "Большой торт",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.RARE,
+                        chance = 25.0,
+                        description = "Восстанавливает 120 HP 🎂"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "oridecon",
+                        itemName = "Оридикон",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 12.0,
+                        description = "Редкий минерал для заточки оружия ⛏️",
+                        quantity = 1
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "elunium",
+                        itemName = "Элуниум",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 12.0,
+                        description = "Редкий минерал для заточки брони ⛏️",
+                        quantity = 1
+                    )
+                ),
+                goldMin = 10,
+                goldMax = 20,
+                goldChance = 95
+            )
+        )
+
         // ============================================
-        // 2. ПАУК (тип 1)
+        // 2. ПАУК (тип 1) — уровни 1-9
         // ============================================
 
         // Уровень 1-2
@@ -130,7 +239,7 @@ class DropManager {
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.COMMON,
                         chance = 12.0,
-                        stats = ItemStats(attack = 4, agility = 1),
+                        stats = ItemStats(attack = 6),
                         description = "Кинжал из кости паука"
                     ),
                     DropTable.DropEntry(
@@ -140,6 +249,15 @@ class DropManager {
                         rarity = ItemRarity.COMMON,
                         chance = 25.0,
                         description = "Восстанавливает 30 HP 🎂"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "oridecon",
+                        itemName = "Оридикон",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 3.0,
+                        description = "Редкий минерал для заточки оружия ⛏️",
+                        quantity = 1
                     )
                 ),
                 goldMin = 2,
@@ -161,7 +279,7 @@ class DropManager {
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.UNCOMMON,
                         chance = 8.0,
-                        stats = ItemStats(attack = 9, agility = 2),
+                        stats = ItemStats(attack = 14),
                         description = "Клинок, пропитанный ядом"
                     ),
                     DropTable.DropEntry(
@@ -170,7 +288,7 @@ class DropManager {
                         itemType = Item.ItemType.SHIELD,
                         rarity = ItemRarity.UNCOMMON,
                         chance = 15.0,
-                        stats = ItemStats(defense = 10, strength = 1),
+                        stats = ItemStats(defense = 8),
                         description = "Прочный щит с крестом"
                     ),
                     DropTable.DropEntry(
@@ -180,6 +298,24 @@ class DropManager {
                         rarity = ItemRarity.UNCOMMON,
                         chance = 20.0,
                         description = "Восстанавливает 60 HP 🍰"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "oridecon",
+                        itemName = "Оридикон",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 5.0,
+                        description = "Редкий минерал для заточки оружия ⛏️",
+                        quantity = 1
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "elunium",
+                        itemName = "Элуниум",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 5.0,
+                        description = "Редкий минерал для заточки брони ⛏️",
+                        quantity = 1
                     )
                 ),
                 goldMin = 5,
@@ -188,7 +324,7 @@ class DropManager {
             )
         )
 
-        // Уровень 5-6 (редкий дроп)
+        // Уровень 5-6
         dropConfigs.add(
             MobDrop(
                 mobType = 1,
@@ -201,7 +337,7 @@ class DropManager {
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.EPIC,
                         chance = 0.5,
-                        stats = ItemStats(attack = 22, agility = 4, strength = 1),
+                        stats = ItemStats(attack = 28),
                         description = "Меч с сильнейшим ядом"
                     ),
                     DropTable.DropEntry(
@@ -211,6 +347,24 @@ class DropManager {
                         rarity = ItemRarity.RARE,
                         chance = 20.0,
                         description = "Восстанавливает 120 HP 🎂"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "oridecon",
+                        itemName = "Оридикон",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 8.0,
+                        description = "Редкий минерал для заточки оружия ⛏️",
+                        quantity = 1
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "elunium",
+                        itemName = "Элуниум",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 8.0,
+                        description = "Редкий минерал для заточки брони ⛏️",
+                        quantity = 1
                     )
                 ),
                 goldMin = 8,
@@ -219,8 +373,57 @@ class DropManager {
             )
         )
 
+        // Уровень 7-9
+        dropConfigs.add(
+            MobDrop(
+                mobType = 1,
+                minLevel = 7,
+                maxLevel = 9,
+                dropTable = DropTable.createMixedDrop(
+                    DropTable.DropEntry(
+                        itemId = "sword_venomous",
+                        itemName = "Меч смертельного яда",
+                        itemType = Item.ItemType.WEAPON,
+                        rarity = ItemRarity.EPIC,
+                        chance = 3.0,
+                        stats = ItemStats(attack = 32),
+                        description = "Меч с сильнейшим ядом"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "cake_large",
+                        itemName = "Большой торт",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.RARE,
+                        chance = 25.0,
+                        description = "Восстанавливает 120 HP 🎂"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "oridecon",
+                        itemName = "Оридикон",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 12.0,
+                        description = "Редкий минерал для заточки оружия ⛏️",
+                        quantity = 1
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "elunium",
+                        itemName = "Элуниум",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 12.0,
+                        description = "Редкий минерал для заточки брони ⛏️",
+                        quantity = 1
+                    )
+                ),
+                goldMin = 12,
+                goldMax = 25,
+                goldChance = 95
+            )
+        )
+
         // ============================================
-        // 3. МНОГОГЛАЗ (тип 2)
+        // 3. МНОГОГЛАЗ (тип 2) — уровни 1-9
         // ============================================
 
         // Уровень 1-2
@@ -236,7 +439,7 @@ class DropManager {
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.COMMON,
                         chance = 10.0,
-                        stats = ItemStats(attack = 6, strength = 2),
+                        stats = ItemStats(attack = 8),
                         description = "Тяжёлый деревянный топор"
                     ),
                     DropTable.DropEntry(
@@ -246,6 +449,15 @@ class DropManager {
                         rarity = ItemRarity.COMMON,
                         chance = 25.0,
                         description = "Восстанавливает 30 HP 🎂"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "oridecon",
+                        itemName = "Оридикон",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 3.0,
+                        description = "Редкий минерал для заточки оружия ⛏️",
+                        quantity = 1
                     )
                 ),
                 goldMin = 3,
@@ -267,7 +479,7 @@ class DropManager {
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.UNCOMMON,
                         chance = 8.0,
-                        stats = ItemStats(attack = 11, strength = 3),
+                        stats = ItemStats(attack = 16),
                         description = "Тяжёлый железный топор"
                     ),
                     DropTable.DropEntry(
@@ -277,6 +489,24 @@ class DropManager {
                         rarity = ItemRarity.UNCOMMON,
                         chance = 20.0,
                         description = "Восстанавливает 60 HP 🍰"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "oridecon",
+                        itemName = "Оридикон",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 5.0,
+                        description = "Редкий минерал для заточки оружия ⛏️",
+                        quantity = 1
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "elunium",
+                        itemName = "Элуниум",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 5.0,
+                        description = "Редкий минерал для заточки брони ⛏️",
+                        quantity = 1
                     )
                 ),
                 goldMin = 6,
@@ -285,7 +515,7 @@ class DropManager {
             )
         )
 
-        // Уровень 5-6 (редкий дроп)
+        // Уровень 5-6
         dropConfigs.add(
             MobDrop(
                 mobType = 2,
@@ -298,7 +528,7 @@ class DropManager {
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.RARE,
                         chance = 4.0,
-                        stats = ItemStats(attack = 17, strength = 4, agility = 2),
+                        stats = ItemStats(attack = 22),
                         description = "Мощный боевой топор"
                     ),
                     DropTable.DropEntry(
@@ -307,7 +537,7 @@ class DropManager {
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.LEGENDARY,
                         chance = 0.3,
-                        stats = ItemStats(attack = 28, strength = 5, agility = 3, luck = 2),
+                        stats = ItemStats(attack = 40),
                         description = "Меч древних героев"
                     ),
                     DropTable.DropEntry(
@@ -317,6 +547,24 @@ class DropManager {
                         rarity = ItemRarity.RARE,
                         chance = 20.0,
                         description = "Восстанавливает 120 HP 🎂"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "oridecon",
+                        itemName = "Оридикон",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 8.0,
+                        description = "Редкий минерал для заточки оружия ⛏️",
+                        quantity = 1
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "elunium",
+                        itemName = "Элуниум",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 8.0,
+                        description = "Редкий минерал для заточки брони ⛏️",
+                        quantity = 1
                     )
                 ),
                 goldMin = 10,
@@ -325,84 +573,7 @@ class DropManager {
             )
         )
 
-        // ============================================
-// ФЛАФФИ (тип 0) — УРОВЕНЬ 7+
-// ============================================
-        dropConfigs.add(
-            MobDrop(
-                mobType = 0,
-                minLevel = 7,
-                maxLevel = 9,
-                dropTable = DropTable.createMixedDrop(
-                    DropTable.DropEntry(
-                        itemId = "sword_steel",
-                        itemName = "Стальной меч",
-                        itemType = Item.ItemType.WEAPON,
-                        rarity = ItemRarity.RARE,
-                        chance = 15.0,
-                        stats = ItemStats(attack = 12, strength = 2),
-                        description = "Качественный стальной меч"
-                    ),
-                    DropTable.DropEntry(
-                        itemId = "sword_flame",
-                        itemName = "Пламенный меч",
-                        itemType = Item.ItemType.WEAPON,
-                        rarity = ItemRarity.EPIC,
-                        chance = 5.0,
-                        stats = ItemStats(attack = 18, strength = 3, agility = 1),
-                        description = "Меч, пылающий огнём"
-                    ),
-                    DropTable.DropEntry(
-                        itemId = "cake_large",
-                        itemName = "Большой торт",
-                        itemType = Item.ItemType.CONSUMABLE,
-                        rarity = ItemRarity.RARE,
-                        chance = 25.0,
-                        description = "Восстанавливает 120 HP 🎂"
-                    )
-                ),
-                goldMin = 10,
-                goldMax = 20,
-                goldChance = 95
-            )
-        )
-
-// ============================================
-// ПАУК (тип 1) — УРОВЕНЬ 7+
-// ============================================
-        dropConfigs.add(
-            MobDrop(
-                mobType = 1,
-                minLevel = 7,
-                maxLevel = 9,
-                dropTable = DropTable.createMixedDrop(
-                    DropTable.DropEntry(
-                        itemId = "sword_venomous",
-                        itemName = "Меч смертельного яда",
-                        itemType = Item.ItemType.WEAPON,
-                        rarity = ItemRarity.EPIC,
-                        chance = 3.0,
-                        stats = ItemStats(attack = 22, agility = 4, strength = 1),
-                        description = "Меч с сильнейшим ядом"
-                    ),
-                    DropTable.DropEntry(
-                        itemId = "cake_large",
-                        itemName = "Большой торт",
-                        itemType = Item.ItemType.CONSUMABLE,
-                        rarity = ItemRarity.RARE,
-                        chance = 25.0,
-                        description = "Восстанавливает 120 HP 🎂"
-                    )
-                ),
-                goldMin = 12,
-                goldMax = 25,
-                goldChance = 95
-            )
-        )
-
-// ============================================
-// МНОГОГЛАЗ (тип 2) — УРОВЕНЬ 7+
-// ============================================
+        // Уровень 7-9
         dropConfigs.add(
             MobDrop(
                 mobType = 2,
@@ -415,7 +586,7 @@ class DropManager {
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.RARE,
                         chance = 12.0,
-                        stats = ItemStats(attack = 17, strength = 4, agility = 2),
+                        stats = ItemStats(attack = 24),
                         description = "Мощный боевой топор"
                     ),
                     DropTable.DropEntry(
@@ -423,8 +594,8 @@ class DropManager {
                         itemName = "Легендарный меч",
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.LEGENDARY,
-                        chance = 1.5,  // 1.5% (было 0.3, но для 7 уровня повышаем)
-                        stats = ItemStats(attack = 28, strength = 5, agility = 3, luck = 2),
+                        chance = 1.5,
+                        stats = ItemStats(attack = 42),
                         description = "Меч древних героев"
                     ),
                     DropTable.DropEntry(
@@ -434,6 +605,24 @@ class DropManager {
                         rarity = ItemRarity.RARE,
                         chance = 25.0,
                         description = "Восстанавливает 120 HP 🎂"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "oridecon",
+                        itemName = "Оридикон",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 12.0,
+                        description = "Редкий минерал для заточки оружия ⛏️",
+                        quantity = 1
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "elunium",
+                        itemName = "Элуниум",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 12.0,
+                        description = "Редкий минерал для заточки брони ⛏️",
+                        quantity = 1
                     )
                 ),
                 goldMin = 15,
@@ -443,8 +632,9 @@ class DropManager {
         )
 
         // ============================================
-// КРАСНЫЙ РЫЦАРЬ (тип 3) — УРОВЕНЬ 8-10
-// ============================================
+        // 4. КРАСНЫЙ РЫЦАРЬ (тип 3) — УРОВЕНЬ 8-10
+        // ============================================
+
         dropConfigs.add(
             MobDrop(
                 mobType = 3,
@@ -457,17 +647,17 @@ class DropManager {
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.EPIC,
                         chance = 8.0,
-                        stats = ItemStats(attack = 18, strength = 3, agility = 1),
+                        stats = ItemStats(attack = 32),
                         description = "Меч, пылающий огнём"
                     ),
                     DropTable.DropEntry(
-                        itemId = "sword_legendary",
-                        itemName = "Легендарный меч",
-                        itemType = Item.ItemType.WEAPON,
-                        rarity = ItemRarity.LEGENDARY,
-                        chance = 2.0,
-                        stats = ItemStats(attack = 28, strength = 5, agility = 3, luck = 2),
-                        description = "Меч древних героев"
+                        itemId = "helmet_1",
+                        itemName = "Шлем рыцаря",
+                        itemType = Item.ItemType.HELMET,
+                        rarity = ItemRarity.RARE,
+                        chance = 5.0,
+                        stats = ItemStats(defense = 12),
+                        description = "Прочный шлем красного рыцаря 🪖"
                     ),
                     DropTable.DropEntry(
                         itemId = "cake_large",
@@ -476,6 +666,24 @@ class DropManager {
                         rarity = ItemRarity.RARE,
                         chance = 30.0,
                         description = "Восстанавливает 120 HP 🎂"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "oridecon",
+                        itemName = "Оридикон",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 15.0,
+                        description = "Редкий минерал для заточки оружия ⛏️",
+                        quantity = 1
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "elunium",
+                        itemName = "Элуниум",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 15.0,
+                        description = "Редкий минерал для заточки брони ⛏️",
+                        quantity = 1
                     )
                 ),
                 goldMin = 20,
@@ -484,9 +692,10 @@ class DropManager {
             )
         )
 
-// ============================================
-// ЗЕЛЁНЫЙ СЛИЗЕНЬ (тип 4) — УРОВЕНЬ 8-10
-// ============================================
+        // ============================================
+        // 5. ЗЕЛЁНЫЙ СЛИЗЕНЬ (тип 4) — УРОВЕНЬ 8-10
+        // ============================================
+
         dropConfigs.add(
             MobDrop(
                 mobType = 4,
@@ -499,7 +708,7 @@ class DropManager {
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.EPIC,
                         chance = 5.0,
-                        stats = ItemStats(attack = 22, agility = 4, strength = 1),
+                        stats = ItemStats(attack = 34),
                         description = "Меч с сильнейшим ядом"
                     ),
                     DropTable.DropEntry(
@@ -509,6 +718,24 @@ class DropManager {
                         rarity = ItemRarity.RARE,
                         chance = 35.0,
                         description = "Восстанавливает 120 HP 🎂"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "oridecon",
+                        itemName = "Оридикон",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 15.0,
+                        description = "Редкий минерал для заточки оружия ⛏️",
+                        quantity = 1
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "elunium",
+                        itemName = "Элуниум",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 15.0,
+                        description = "Редкий минерал для заточки брони ⛏️",
+                        quantity = 1
                     )
                 ),
                 goldMin = 15,
@@ -517,9 +744,10 @@ class DropManager {
             )
         )
 
-// ============================================
-// СТАЛЬНОЙ РЫЦАРЬ (тип 5) — УРОВЕНЬ 9-11
-// ============================================
+        // ============================================
+        // 6. СТАЛЬНОЙ РЫЦАРЬ (тип 5) — УРОВЕНЬ 9-11
+        // ============================================
+
         dropConfigs.add(
             MobDrop(
                 mobType = 5,
@@ -532,16 +760,25 @@ class DropManager {
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.LEGENDARY,
                         chance = 4.0,
-                        stats = ItemStats(attack = 28, strength = 5, agility = 3, luck = 2),
+                        stats = ItemStats(attack = 45),
                         description = "Меч древних героев"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "chest_1",
+                        itemName = "Стальная броня",
+                        itemType = Item.ItemType.CHEST,
+                        rarity = ItemRarity.EPIC,
+                        chance = 3.0,
+                        stats = ItemStats(defense = 22),
+                        description = "Прочная стальная броня 🛡️"
                     ),
                     DropTable.DropEntry(
                         itemId = "sword_mythic",
                         itemName = "Мифический клинок",
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.MYTHIC,
-                        chance = 0.5,  // 0.5% — очень редкий
-                        stats = ItemStats(attack = 35, strength = 7, agility = 5, luck = 3),
+                        chance = 0.5,
+                        stats = ItemStats(attack = 58),
                         description = "Оружие богов"
                     ),
                     DropTable.DropEntry(
@@ -551,6 +788,24 @@ class DropManager {
                         rarity = ItemRarity.RARE,
                         chance = 30.0,
                         description = "Восстанавливает 120 HP 🎂"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "oridecon",
+                        itemName = "Оридикон",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 20.0,
+                        description = "Редкий минерал для заточки оружия ⛏️",
+                        quantity = 1
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "elunium",
+                        itemName = "Элуниум",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 20.0,
+                        description = "Редкий минерал для заточки брони ⛏️",
+                        quantity = 1
                     )
                 ),
                 goldMin = 30,
@@ -559,7 +814,9 @@ class DropManager {
             )
         )
 
-// ГОБЛИН (тип 6) — УРОВЕНЬ 12-13
+        // ============================================
+        // 7. ГОБЛИН (тип 6) — УРОВЕНЬ 12-13
+        // ============================================
 
         dropConfigs.add(
             MobDrop(
@@ -572,8 +829,8 @@ class DropManager {
                         itemName = "Легендарный меч",
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.LEGENDARY,
-                        chance = 5.0,
-                        stats = ItemStats(attack = 28, strength = 5, agility = 3, luck = 2),
+                        chance = 0.2,
+                        stats = ItemStats(attack = 48),
                         description = "Меч древних героев"
                     ),
                     DropTable.DropEntry(
@@ -581,17 +838,9 @@ class DropManager {
                         itemName = "Мифический клинок",
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.MYTHIC,
-                        chance = 1.0,
-                        stats = ItemStats(attack = 35, strength = 7, agility = 5, luck = 3),
+                        chance = 0.4,
+                        stats = ItemStats(attack = 60),
                         description = "Оружие богов"
-                    ),
-                    DropTable.DropEntry(
-                        itemId = "cake_large",
-                        itemName = "Большой торт",
-                        itemType = Item.ItemType.CONSUMABLE,
-                        rarity = ItemRarity.RARE,
-                        chance = 30.0,
-                        description = "Восстанавливает 120 HP 🎂"
                     ),
                     DropTable.DropEntry(
                         itemId = "helmet_2",
@@ -599,7 +848,7 @@ class DropManager {
                         itemType = Item.ItemType.HELMET,
                         rarity = ItemRarity.EPIC,
                         chance = 1.0,
-                        stats = ItemStats(defense = 1, health = 5, strength = 1),
+                        stats = ItemStats(defense = 16),
                         description = "Шлем, снятый с могучего гоблина"
                     ),
                     DropTable.DropEntry(
@@ -608,8 +857,43 @@ class DropManager {
                         itemType = Item.ItemType.CHEST,
                         rarity = ItemRarity.EPIC,
                         chance = 1.0,
-                        stats = ItemStats(defense = 3, health = 8, strength = 2),
+                        stats = ItemStats(defense = 18, health = 10),
                         description = "Прочная броня, снятая с гоблина-воина 🛡️"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "ring_1",
+                        itemName = "Кольцо гоблина",
+                        itemType = Item.ItemType.RING,
+                        rarity = ItemRarity.RARE,
+                        chance = 0.2,
+                        stats = ItemStats(health = 20, dodge = 5),
+                        description = "Кольцо, найденное у гоблина 💍"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "cake_large",
+                        itemName = "Большой торт",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.RARE,
+                        chance = 20.0,
+                        description = "Восстанавливает 120 HP 🎂"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "oridecon",
+                        itemName = "Оридикон",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 25.0,
+                        description = "Редкий минерал для заточки оружия ⛏️",
+                        quantity = 1
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "elunium",
+                        itemName = "Элуниум",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 25.0,
+                        description = "Редкий минерал для заточки брони ⛏️",
+                        quantity = 1
                     )
                 ),
                 goldMin = 40,
@@ -617,32 +901,43 @@ class DropManager {
                 goldChance = 95
             )
         )
-            // монах
+
+        // ============================================
+        // 8. МОНАХ (тип 7) — УРОВЕНЬ 12-13
+        // ============================================
+
         dropConfigs.add(
             MobDrop(
                 mobType = 7,
                 minLevel = 12,
                 maxLevel = 13,
                 dropTable = DropTable.createMixedDrop(
-                    // ⭐ ПЕРЧАТКИ (1% шанс)
                     DropTable.DropEntry(
                         itemId = "gloves_1",
                         itemName = "Перчатки монаха",
                         itemType = Item.ItemType.GLOVES,
                         rarity = ItemRarity.EPIC,
-                        chance = 5.0,
-                        stats = ItemStats(defense = 2, health = 4, agility = 2, strength = 1),
+                        chance = 30.0,
+                        stats = ItemStats(defense = 8, health = 6),
                         description = "Перчатки, укрепляющие силу духа 🥊"
                     ),
-                    // ⭐ ШТАНЫ (1% шанс)
                     DropTable.DropEntry(
                         itemId = "pants_1",
                         itemName = "Штаны монаха",
                         itemType = Item.ItemType.PANTS,
                         rarity = ItemRarity.EPIC,
-                        chance = 5.0,
-                        stats = ItemStats(defense = 2, health = 6, agility = 1, strength = 2),
+                        chance = 30.0,
+                        stats = ItemStats(defense = 8, health = 8),
                         description = "Удобные штаны для долгих странствий 👖"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "shield_1",
+                        itemName = "Деревянный щит",
+                        itemType = Item.ItemType.SHIELD,
+                        rarity = ItemRarity.EPIC,
+                        chance = 30.0,
+                        stats = ItemStats(defense = 22),
+                        description = "Крепкий деревянный щит 🛡️"
                     ),
                     DropTable.DropEntry(
                         itemId = "sword_arachnid",
@@ -650,10 +945,36 @@ class DropManager {
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.EPIC,
                         chance = 0.5,
-                        stats = ItemStats(attack = 37, health = 15, strength = 8, agility = 8, luck = 4),
+                        stats = ItemStats(attack = 38),
                         description = "Мощный меч"
                     ),
-                    // Большой торт (для разнообразия)
+                    DropTable.DropEntry(
+                        itemId = "ring_1",
+                        itemName = "Кольцо силы",
+                        itemType = Item.ItemType.RING,
+                        rarity = ItemRarity.RARE,
+                        chance = 0.2,
+                        stats = ItemStats(health = 25, crit = 5, dodge = 3),
+                        description = "Древнее мощное кольцо силы 💍"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "necklace_1",
+                        itemName = "Ожерелье выносливости",
+                        itemType = Item.ItemType.NECKLACE,
+                        rarity = ItemRarity.EPIC,
+                        chance = 0.2,
+                        stats = ItemStats(health = 30, hpRegen = 3),
+                        description = "Древнее ожерелье, повышающее живучесть 📿"
+                    ),
+                        DropTable.DropEntry(
+                            itemId = "rune_strength",
+                            itemName = "Руна силы",
+                            itemType = Item.ItemType.CONSUMABLE,
+                            rarity = ItemRarity.RARE,
+                            chance = 55.0,
+                            description = "Увеличивает атаку на 3 💎",
+                            runeStats = ItemStats(attack = 3)
+                        ),
                     DropTable.DropEntry(
                         itemId = "cake_large",
                         itemName = "Большой торт",
@@ -661,6 +982,24 @@ class DropManager {
                         rarity = ItemRarity.RARE,
                         chance = 25.0,
                         description = "Восстанавливает 120 HP 🎂"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "oridecon",
+                        itemName = "Оридикон",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 25.0,
+                        description = "Редкий минерал для заточки оружия ⛏️",
+                        quantity = 1
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "elunium",
+                        itemName = "Элуниум",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 25.0,
+                        description = "Редкий минерал для заточки брони ⛏️",
+                        quantity = 1
                     )
                 ),
                 goldMin = 50,
@@ -670,22 +1009,22 @@ class DropManager {
         )
 
         // ============================================
-// ОРК (тип 8) — УРОВЕНЬ 13-14
-// ============================================
+        // 9. ОРК (тип 8) — УРОВЕНЬ 13-14
+        // ============================================
+
         dropConfigs.add(
             MobDrop(
                 mobType = 8,
                 minLevel = 13,
                 maxLevel = 14,
                 dropTable = DropTable.createMixedDrop(
-                    // ⭐ БРОНЯ (5% шанс)
                     DropTable.DropEntry(
                         itemId = "chest_2",
                         itemName = "Броня орка",
                         itemType = Item.ItemType.CHEST,
                         rarity = ItemRarity.RARE,
-                        chance = 5.0,
-                        stats = ItemStats(defense = 8, health = 15, strength = 4),
+                        chance = 30.0,
+                        stats = ItemStats(defense = 14),
                         description = "Тяжёлая броня, снятая с поверженного орка 🛡️"
                     ),
                     DropTable.DropEntry(
@@ -693,11 +1032,28 @@ class DropManager {
                         itemName = "Лунный меч",
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.EPIC,
-                        chance = 0.5,
-                        stats = ItemStats(attack = 39, health = 17, strength = 10, agility = 6, luck = 6),
+                        chance = 10.0,
+                        stats = ItemStats(attack = 42),
                         description = "Меч, светящийся в лунном свете"
                     ),
-                    // Большой торт
+                    DropTable.DropEntry(
+                        itemId = "shield_1",
+                        itemName = "Деревянный щит",
+                        itemType = Item.ItemType.SHIELD,
+                        rarity = ItemRarity.EPIC,
+                        chance = 0.4,
+                        stats = ItemStats(defense = 22),
+                        description = "Крепкий деревянный щит 🛡️"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "ring_1",
+                        itemName = "Кольцо силы",
+                        itemType = Item.ItemType.RING,
+                        rarity = ItemRarity.RARE,
+                        chance = 0.2,
+                        stats = ItemStats(health = 30, crit = 3, critDamage = 5),
+                        description = "Древнее мощное кольцо силы 💍"
+                    ),
                     DropTable.DropEntry(
                         itemId = "cake_large",
                         itemName = "Большой торт",
@@ -705,6 +1061,24 @@ class DropManager {
                         rarity = ItemRarity.RARE,
                         chance = 25.0,
                         description = "Восстанавливает 120 HP 🎂"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "oridecon",
+                        itemName = "Оридикон",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 25.0,
+                        description = "Редкий минерал для заточки оружия ⛏️",
+                        quantity = 1
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "elunium",
+                        itemName = "Элуниум",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 25.0,
+                        description = "Редкий минерал для заточки брони ⛏️",
+                        quantity = 1
                     )
                 ),
                 goldMin = 40,
@@ -713,23 +1087,23 @@ class DropManager {
             )
         )
 
-// ============================================
-// ТРОЛЛЬ (тип 9) — УРОВЕНЬ 14-15
-// ============================================
+        // ============================================
+        // 10. ТРОЛЛЬ (тип 9) — УРОВЕНЬ 14-15
+        // ============================================
+
         dropConfigs.add(
             MobDrop(
                 mobType = 9,
                 minLevel = 14,
                 maxLevel = 15,
                 dropTable = DropTable.createMixedDrop(
-                    // ⭐ БОТИНКИ (5% шанс)
                     DropTable.DropEntry(
                         itemId = "boots_1",
                         itemName = "Сапоги тролля",
                         itemType = Item.ItemType.BOOTS,
                         rarity = ItemRarity.RARE,
-                        chance = 5.0,
-                        stats = ItemStats(defense = 5, health = 10, agility = 2, strength = 3),
+                        chance = 40.0,
+                        stats = ItemStats(defense = 12),
                         description = "Массивные сапоги, снятые с тролля 👢"
                     ),
                     DropTable.DropEntry(
@@ -737,11 +1111,28 @@ class DropManager {
                         itemName = "Пламенный меч",
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.EPIC,
-                        chance = 1.0,
-                        stats = ItemStats(attack = 45, health = 15, strength = 12, agility = 5, luck = 5),
+                        chance = 30.0,
+                        stats = ItemStats(attack = 48),
                         description = "Меч, пылающий огнём"
                     ),
-                    // Большой торт
+                    DropTable.DropEntry(
+                        itemId = "shield_1",
+                        itemName = "Деревянный щит",
+                        itemType = Item.ItemType.SHIELD,
+                        rarity = ItemRarity.EPIC,
+                        chance = 0.4,
+                        stats = ItemStats(defense = 24),
+                        description = "Крепкий деревянный щит 🛡️"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "ring_1",
+                        itemName = "Кольцо силы",
+                        itemType = Item.ItemType.RING,
+                        rarity = ItemRarity.RARE,
+                        chance = 0.2,
+                        stats = ItemStats(health = 35, crit = 5, critDamage = 10, dodge = 5),
+                        description = "Древнее мощное кольцо силы 💍"
+                    ),
                     DropTable.DropEntry(
                         itemId = "cake_large",
                         itemName = "Большой торт",
@@ -749,6 +1140,24 @@ class DropManager {
                         rarity = ItemRarity.RARE,
                         chance = 25.0,
                         description = "Восстанавливает 120 HP 🎂"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "oridecon",
+                        itemName = "Оридикон",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 25.0,
+                        description = "Редкий минерал для заточки оружия ⛏️",
+                        quantity = 1
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "elunium",
+                        itemName = "Элуниум",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.UNCOMMON,
+                        chance = 25.0,
+                        description = "Редкий минерал для заточки брони ⛏️",
+                        quantity = 1
                     )
                 ),
                 goldMin = 50,
@@ -759,19 +1168,14 @@ class DropManager {
     }
 
     fun getDropForMob(mob: Mob): Pair<List<Item>, Int> {
-        // Ищем конфигурацию дропа
         for (config in dropConfigs) {
             if (config.matches(mob)) {
                 val (items, gold) = config.getDrop(random)
 
-                // ⭐ ЕСЛИ ЭТО БОСС — УВЕЛИЧИВАЕМ ДРОП
                 if (mob.isBoss) {
                     val boostedItems = mutableListOf<Item>()
-                    val multiplier = 3  // Увеличиваем количество предметов в 3 раза
-
-                    // Удваиваем предметы
+                    val multiplier = 3
                     for (item in items) {
-                        // Повторяем предмет несколько раз
                         for (i in 0 until multiplier) {
                             val boostedItem = item.copy(
                                 id = "${item.id}_${i}",
@@ -779,14 +1183,8 @@ class DropManager {
                             )
                             boostedItems.add(boostedItem)
                         }
-
-                        // Добавляем редкие предметы с повышенным шансом
-                        // (они уже есть в дроп-таблице, просто увеличиваем количество)
                     }
-
-                    // Увеличиваем золото в 3-5 раз
-                    val boostedGold = gold * (3 + random.nextInt(3))  // 3-5 раз
-
+                    val boostedGold = gold * (3 + random.nextInt(3))
                     println("👑 Босс дроп: ${boostedItems.size} предметов, ${boostedGold} золота")
                     return Pair(boostedItems, boostedGold)
                 }

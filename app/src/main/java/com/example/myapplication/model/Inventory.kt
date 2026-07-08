@@ -10,14 +10,6 @@ class Inventory {
     // Текущая выбранная ячейка
     var selectedSlot: Int = -1
 
-    // Добавить предмет в инвентарь
-    fun addItem(item: Item): Boolean {
-        val emptyIndex = items.indexOf(null)
-        if (emptyIndex == -1) return false // Инвентарь полон
-        items[emptyIndex] = item
-        return true
-    }
-
     // Экипировать предмет
     fun equip(index: Int): Boolean {
         val item = items[index] ?: return false
@@ -45,6 +37,45 @@ class Inventory {
         }
         return item
     }
+
+    // ⭐ ДОБАВЛЯЕМ ПРЕДМЕТ С УЧЁТОМ СТАКИВАНИЯ
+    fun addItem(item: Item): Boolean {
+        // ⭐ УБЕЖДАЕМСЯ, ЧТО RUNES НЕ NULL
+        if (item.runes == null) {
+            item.runes = mutableListOf()
+        }
+
+        if (item.isStackable()) {
+            for (i in items.indices) {
+                val existingItem = items[i]
+                if (existingItem != null &&
+                    existingItem.id == item.id &&
+                    existingItem.isStackable() &&
+                    existingItem.refineLevel == item.refineLevel) {
+                    existingItem.addQuantity(item.quantity)
+                    return true
+                }
+            }
+        }
+
+        val emptyIndex = items.indexOf(null)
+        if (emptyIndex == -1) return false
+        items[emptyIndex] = item
+        return true
+    }
+
+    // ⭐ УДАЛЕНИЕ ОДНОЙ ЕДИНИЦЫ ИЗ СТАКА
+    fun removeOneItem(index: Int): Item? {
+        val item = items[index] ?: return null
+        if (item.isStackable() && item.quantity > 1) {
+            item.quantity--
+            return item
+        } else {
+            items[index] = null
+            return item
+        }
+    }
+
 
     // Получить слот для типа предмета
     private fun getSlotForItem(item: Item): EquipmentSlot? {
@@ -83,23 +114,43 @@ class Inventory {
 
     // Получить суммарные статы экипировки
     fun getTotalStats(): ItemStats {
-        var attack = 0
-        var defense = 0
-        var health = 0
-        var agility = 0
-        var strength = 0
-        var luck = 0
+        var totalAttack = 0
+        var totalDefense = 0
+        var totalHealth = 0
+        var totalDodge = 0
+        var totalCrit = 0
+        var totalCritDamage = 0
+        var totalHpRegen = 0
+        var totalMoveSpeed = 0
+        var totalGoldBonus = 0
+        var totalExpBonus = 0
 
         for ((_, item) in equipment) {
-            attack += item.stats.attack
-            defense += item.stats.defense
-            health += item.stats.health
-            agility += item.stats.agility
-            strength += item.stats.strength
-            luck += item.stats.luck
+            val stats = item.getFinalStats()
+            totalAttack += stats.attack
+            totalDefense += stats.defense
+            totalHealth += stats.health
+            totalDodge += stats.dodge
+            totalCrit += stats.crit
+            totalCritDamage += stats.critDamage
+            totalHpRegen += stats.hpRegen
+            totalMoveSpeed += stats.moveSpeed
+            totalGoldBonus += stats.goldBonus
+            totalExpBonus += stats.expBonus
         }
 
-        return ItemStats(attack, defense, health, agility, strength, luck)
+        return ItemStats(
+            attack = totalAttack,
+            defense = totalDefense,
+            health = totalHealth,
+            dodge = totalDodge,
+            crit = totalCrit,
+            critDamage = totalCritDamage,
+            hpRegen = totalHpRegen,
+            moveSpeed = totalMoveSpeed,
+            goldBonus = totalGoldBonus,
+            expBonus = totalExpBonus
+        )
     }
 
     // Проверить, занят ли слот
@@ -118,9 +169,43 @@ class Inventory {
     }
 
     fun removeItem(index: Int): Item? {
-        if (index < 0 || index >= items.size) return null
-        val item = items[index]
+        val item = items[index] ?: return null
         items[index] = null
         return item
+    }
+
+    // ⭐ ВСТАВКА РУНЫ В ПРЕДМЕТ
+    fun insertRune(itemIndex: Int, runeIndex: Int): Boolean {
+        val item = items[itemIndex] ?: return false
+        val runeItem = items[runeIndex] ?: return false
+
+        // Проверяем, что руна действительно руна
+        if (!runeItem.id.startsWith("rune_")) return false
+
+        // Проверяем, что предмет может принять руну
+        if (!item.canAddRune()) return false
+
+        // Создаём руну из предмета
+        val rune = Rune(
+            id = runeItem.id,
+            name = runeItem.name,
+            description = runeItem.description,
+            stats = runeItem.stats,
+            rarity = runeItem.rarity
+        )
+
+        // Добавляем руну в предмет
+        if (item.addRune(rune)) {
+            // Удаляем руну из инвентаря
+            items[runeIndex] = null
+            return true
+        }
+        return false
+    }
+
+    // ⭐ ИЗВЛЕЧЕНИЕ РУНЫ ИЗ ПРЕДМЕТА
+    fun extractRune(itemIndex: Int, runeIndex: Int): Rune? {
+        val item = items[itemIndex] ?: return null
+        return item.removeRune(runeIndex)
     }
 }

@@ -387,7 +387,6 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
 
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     private fun attackInBattle() {
-        println("⚔️ attackInBattle() вызван!")
         isAttackingInBattle = true
         battleFrameIndex = 0
         battleFrameTimer = 0
@@ -405,21 +404,18 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
         } else if (battleManager.state == BattleManager.BattleState.DEFEAT) {
             showMessage("💀 Вы погибли...")
 
-            val boss = battleManager.currentMob
-
             android.os.Handler().postDelayed({
-                if (boss != null && boss.isBoss) {
-                    boss.hp = boss.maxHp
-                    showMessage("👑 Босс восстановил все HP!")
-                }
-
                 battleManager.endBattle()
                 gameState = GameState.GAME
-                player.hp = player.calculateMaxHp()
+
+                val maxHp = player.calculateMaxHp()
+                player.hp = 1f
+
                 player.x = 400f
                 player.y = 400f
                 isAttackingInBattle = false
                 saveGame()
+                showMessage("💀 Вы возродились! HP: ${player.hp.toInt()}/${maxHp.toInt()}")
             }, 1500)
         }
     }
@@ -464,11 +460,16 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
                 GameState.BATTLE -> drawBattle(canvas)
                 GameState.STATS -> {
                     drawGame(canvas)
+                    val damage = player.getDamage(inventory)
+                    val defense = player.getDefense(inventory)
                     statsScreen.draw(
                         canvas,
                         screenWidth,
                         screenHeight,
                         player,
+                        inventory,
+                        damage,
+                        defense,
                         { statType -> upgradeStat(statType) },
                         { closeStats() },
                         { resetStats() }
@@ -484,7 +485,8 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
                         player,
                         this,
                         { closeInventory() },
-                        { newName -> renamePlayer(newName) }
+                        { newName -> renamePlayer(newName) },
+                        { message -> showMessage(message) }
                     )
                 }
                 GameState.SHOP -> {
@@ -934,7 +936,9 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
                     { closeInventory() },
                     { index -> deleteItem(index) },
                     { index -> useItem(index) },
-                    { newName -> renamePlayer(newName) }
+                    { newName -> renamePlayer(newName) },
+                    { index -> refineItem(index) },
+                    { message -> showMessage(message) }
                 )
                 return true
             }
@@ -1141,19 +1145,49 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
         }
     }
 
+    // ⭐ МЕТОД ИСПОЛЬЗОВАНИЯ ПРЕДМЕТА
     private fun useItem(index: Int) {
         val items = inventory.getItems()
-        if (index < items.size) {
-            val item = items[index]
-            if (item != null && item.type == Item.ItemType.CONSUMABLE) {
-                if (item.use(player)) {
-                    inventory.removeItem(index)
-                    showMessage("🍰 ${item.name} использован! HP: ${player.hp.toInt()}/${player.calculateMaxHp().toInt()}")
-                    saveGame()
-                } else {
-                    showMessage("❌ HP уже максимальный!")
-                }
+        if (index >= items.size) return
+
+        val item = items[index] ?: return
+        if (item.type != Item.ItemType.CONSUMABLE) {
+            showMessage("❌ Нельзя использовать!")
+            return
+        }
+
+        // ⭐ ДЛЯ ТОРТОВ
+        if (item.id.startsWith("cake_")) {
+            val maxHp = player.calculateMaxHp()
+            if (player.hp >= maxHp) {
+                showMessage("❌ HP уже максимальный!")
+                return
             }
+
+            val healAmount = when (item.id) {
+                "cake_small" -> 30f
+                "cake_medium" -> 60f
+                "cake_large" -> 120f
+                else -> 0f
+            }
+
+            player.hp = min(player.hp + healAmount, maxHp)
+
+            // ⭐ УДАЛЯЕМ ТОЛЬКО ОДНУ ЕДИНИЦУ
+            inventory.removeOneItem(index)
+
+            showMessage("🍰 ${item.name} использован! HP: ${player.hp.toInt()}/${maxHp.toInt()}")
+            saveGame()
+            return
+        }
+
+        // ⭐ ДЛЯ ОСТАЛЬНЫХ РАСХОДНИКОВ
+        if (item.use(player)) {
+            inventory.removeOneItem(index)
+            showMessage("✅ ${item.name} использован!")
+            saveGame()
+        } else {
+            showMessage("❌ Нельзя использовать!")
         }
     }
 
@@ -1168,6 +1202,7 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
             val bossX = margin + (worldWidth - margin * 2) * (0.2f + 0.6f * (0..100).random() / 100f)
             val bossY = margin + (worldHeight - margin * 2) * (0.2f + 0.6f * (0..100).random() / 100f)
 
+            // ⭐ СОЗДАЁМ БОССА С УЧЁТОМ АТАКИ И ЗАЩИТЫ МОБА
             val boss = Mob(
                 x = bossX,
                 y = bossY,
@@ -1175,7 +1210,9 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
                 hp = mob.maxHp * 3,
                 maxHp = mob.maxHp * 3,
                 level = mob.level + 5,
-                isBoss = true
+                isBoss = true,
+                attack = (mob.attack * 1.2f).toInt(),   // ← АТАКА × 1.5
+                defense = (mob.defense * 1.2f).toInt()  // ← ЗАЩИТА × 1.5
             ).apply {
                 startX = bossX
                 startY = bossY
@@ -1452,5 +1489,75 @@ class GameView(context: Context) : SurfaceView(context), Runnable {
             typeface = Typeface.DEFAULT_BOLD
         }
         canvas.drawText(text, x + width / 2, y + height / 2 + 9f, textPaint)
+    }
+
+    // ⭐ МЕТОД ЗАТОЧКИ ПРЕДМЕТА
+    private fun refineItem(index: Int) {
+        println("🔨🔨🔨 refineItem() ВЫЗВАН! index=$index")
+
+        val items = inventory.getItems()
+        if (index >= items.size) {
+            println("🔨 index >= items.size")
+            return
+        }
+
+        val item = items[index]
+        if (item == null) {
+            println("🔨 item == null")
+            return
+        }
+
+        println("🔨 Предмет: ${item.name}, уровень: ${item.refineLevel}, тип: ${item.type}")
+
+        if (item.type == Item.ItemType.CONSUMABLE) {
+            showMessage("❌ Нельзя заточить расходник!")
+            println("🔨 Это расходник!")
+            return
+        }
+
+        if (item.refineLevel >= 10) {
+            showMessage("❌ Предмет уже заточен до максимума!")
+            println("🔨 Уже +10!")
+            return
+        }
+
+        val materialId = if (item.type == Item.ItemType.WEAPON || item.type == Item.ItemType.SHIELD) {
+            "oridecon"
+        } else {
+            "elunium"
+        }
+
+        val refineManager = RefineManager()
+
+        // ⭐ ЛОГ ПРОВЕРКИ РЕСУРСОВ
+        val canRefine = refineManager.canRefine(item, player, inventory)
+        println("🔨 canRefine = $canRefine")
+
+        if (!canRefine) {
+            val needed = RefineManager.getMaterialsNeeded(item.refineLevel)
+            val cost = RefineManager.getGoldCost(item.refineLevel)
+            val materialName = if (item.type == Item.ItemType.WEAPON || item.type == Item.ItemType.SHIELD) {
+                "Оридикона"
+            } else {
+                "Элуниума"
+            }
+            println("🔨 Не хватает ресурсов! Нужно: $needed $materialName и $cost 💰")
+            showMessage("❌ Не хватает ресурсов! Нужно: $needed $materialName и $cost 💰")
+            return
+        }
+
+        println("🔨 Выполняем заточку...")
+        val result = refineManager.refine(item, player, inventory)
+        println("🔨 Результат: success=${result.success}, broken=${result.broken}, newLevel=${result.newLevel}")
+
+        showMessage(result.message)
+
+        if (result.broken) {
+            inventory.removeItem(index)
+            inventory.selectedSlot = -1
+            showMessage("💔 ${item.name} уничтожен при заточке!")
+        }
+
+        saveGame()
     }
 }

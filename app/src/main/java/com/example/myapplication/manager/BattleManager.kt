@@ -24,11 +24,14 @@ class BattleManager {
     private val mainHandler = Handler(Looper.getMainLooper())
     private val random = java.util.Random()
     private val dropManager = DropManager()
+    var inventory: Inventory? = null
 
     fun startBattle(player: Player, mob: Mob, inventory: Inventory) {
         this.player = player
         this.currentMob = mob
+        this.inventory = inventory
 
+        // ⭐ ЕСЛИ ЭТО БОСС — УБЕДИМСЯ, ЧТО У НЕГО ПОЛНОЕ HP
         if (mob.isBoss) {
             mob.hp = mob.maxHp
             println("👑 Босс готов к бою: HP ${mob.hp}/${mob.maxHp}")
@@ -60,22 +63,31 @@ class BattleManager {
 
                     mainHandler.postDelayed({
                         val mob = currentMob!!
-                        var damage = 5f + random.nextInt(10).toFloat()
 
-                        when (mob.type) {
-                            3, 4, 5 -> damage *= 2f
-                        }
+                        // ⭐ РАСЧЁТ УРОНА МОБА
+                        var damage = mob.attack.toFloat()  // Используем атаку моба
+                        damage += (random.nextInt(7) - 3).toFloat()  // Случайность ±3
 
                         if (mob.isBoss) {
-                            damage *= 1.5f
+                            damage *= 1.5f  // Боссы бьют сильнее
                         }
-                        player!!.hp -= damage
 
+                        // ⭐ ЗАЩИТА ИГРОКА
+                        val playerDefense = if (inventory != null) {
+                            player!!.getDefense(inventory!!)
+                        } else {
+                            0
+                        }
+
+                        // Урон не может быть меньше 1
+                        damage = maxOf(1f, damage - playerDefense)
+
+                        // Наносим урон игроку
+                        player!!.hp -= damage
                         if (player!!.hp < 0) player!!.hp = 0f
 
+                        // Эффекты и отображение урона
                         BattleRenderer.triggerHitEffect(player!!.x, player!!.y)
-
-                        // ⭐ УРОН ПО ИГРОКУ (ЭКРАННЫЕ КООРДИНАТЫ)
                         BattleRenderer.showBattleDamageNumber(
                             "player",
                             "-${damage.toInt()}",
@@ -83,13 +95,17 @@ class BattleManager {
                             -100f
                         )
 
+                        // Проверка смерти игрока
                         if (player!!.hp <= 0) {
-                            player!!.hp = 0f
+                            player!!.hp = 1f
                             state = BattleState.DEFEAT
 
+                            // Восстанавливаем HP моба при смерти игрока
+                            mob.hp = mob.maxHp
                             if (mob.isBoss) {
-                                mob.hp = mob.maxHp
                                 println("👑 Босс восстановил HP (смерть игрока): ${mob.hp}/${mob.maxHp}")
+                            } else {
+                                println("🔄 Моб восстановил HP (смерть игрока): ${mob.hp}/${mob.maxHp}")
                             }
 
                             mainHandler.postDelayed({
@@ -111,7 +127,9 @@ class BattleManager {
                     }, 2000)
                 }
             }
-            BattleState.DEFEAT -> {}
+            BattleState.DEFEAT -> {
+                // Уже обработано выше
+            }
             else -> {}
         }
     }
@@ -120,24 +138,36 @@ class BattleManager {
     fun playerAttack() {
         if (state != BattleState.PLAYER_TURN || currentMob == null || isProcessing) return
 
+        // ⭐ ПРОВЕРЯЕМ НАЛИЧИЕ INVENTORY
+        if (inventory == null) {
+            println("❌ inventory == null в playerAttack!")
+            return
+        }
+
         isProcessing = true
         val mob = currentMob!!
+        val inv = inventory!!
 
         BattleRenderer.triggerPlayerAttack()
 
-        val baseDamage = 10f + (player?.level?.times(2) ?: 2).toFloat()
+        // ⭐ РАСЧЁТ УРОНА ИГРОКА
+        val playerDamage = player!!.getDamage(inv)
+        val randomBonus = random.nextInt(5)
+        var damage = playerDamage + randomBonus.toFloat()
+
+        // ⭐ ЗАЩИТА МОБА
+        val mobDefense = mob.defense.toFloat()
+        damage = maxOf(1f, damage - mobDefense)  // Минимум 1 урона
+
+        // ⭐ МНОЖИТЕЛЬ ДЛЯ БОССА (боссы получают меньше урона)
         val bossMultiplier = if (mob.isBoss) 0.5f else 1f
-        val bonusDamage = when (mob.type) {
-            0 -> 5f
-            1 -> 0f
-            2 -> -5f
-            else -> 0f
-        }
-        val damage = (baseDamage + bonusDamage + random.nextInt(5).toFloat()) * bossMultiplier
+        damage *= bossMultiplier
+
+        // Наносим урон мобу
         mob.hp -= damage
         if (mob.hp < 0) mob.hp = 0f
 
-        // ⭐ УРОН ПО МОБУ (ЭКРАННЫЕ КООРДИНАТЫ)
+        // ⭐ ЭФФЕКТЫ И ОТОБРАЖЕНИЕ УРОНА
         if (mob.isBoss) {
             BattleRenderer.triggerHitEffect(mob.x, mob.y)
             BattleRenderer.showBattleDamageNumber(
@@ -168,8 +198,6 @@ class BattleManager {
 
                 if (gold > 0) {
                     player?.gold = (player?.gold ?: 0) + gold
-
-                    // ⭐ ЗОЛОТО (ЭКРАННЫЕ КООРДИНАТЫ)
                     BattleRenderer.showBattleDamageNumber(
                         "mob",
                         if (mob.isBoss) "💰 +${gold} золота! (БОСС)" else "💰 +${gold} золота!",
@@ -201,7 +229,6 @@ class BattleManager {
                 player?.exp = (player?.exp ?: 0) + expReward
                 println("✅ Добавлено $expReward опыта! Моб уровня ${mob.level}, игрок уровня ${playerLevel}")
 
-                // ⭐ ОПЫТ (ЭКРАННЫЕ КООРДИНАТЫ)
                 BattleRenderer.showBattleDamageNumber(
                     "mob",
                     if (mob.isBoss) "👑 +${expReward} EXP! (БОСС)" else "+${expReward} EXP 💫",

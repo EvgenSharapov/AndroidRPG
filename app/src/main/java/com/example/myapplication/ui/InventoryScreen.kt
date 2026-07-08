@@ -13,8 +13,53 @@ class InventoryScreen(
     private val spriteManager: SpriteManager
 ) {
 
-    private val slotSize = 180f
-    private val padding = 20f
+    // ⭐ ВКЛАДКИ ИНВЕНТАРЯ
+    enum class InventoryTab {
+        ALL,        // Все предметы
+        EQUIPMENT,  // Вещи (оружие, броня, аксессуары)
+        CONSUMABLES,// Расходники (торты, материалы)
+        RUNES       // Руны
+    }
+
+    // ⭐ АДАПТИВНЫЕ РАЗМЕРЫ — ВЫЧИСЛЯЮТСЯ НА ОСНОВЕ ЭКРАНА
+    private data class ScreenSizes(
+        val scale: Float,
+        val slotSize: Float,
+        val padding: Float,
+        val charDisplaySize: Float,
+        val charGlowRadius: Float,
+        val equipmentRadius: Float,
+        val equipmentSlotSize: Float,
+        val gridSlotSize: Float,
+        val gridPadding: Float,
+        val gridStartY: Float,
+        val gridCols: Int,
+        val gridRows: Int,
+        val infoWidth: Float,
+        val infoHeight: Float,
+        val fontSizeTitle: Float,
+        val fontSizeLarge: Float,
+        val fontSizeMedium: Float,
+        val fontSizeSmall: Float,
+        val fontSizeTiny: Float,
+        val closeBtnSize: Float,
+        val editBtnSize: Float,
+        val dialogWidth: Float,
+        val dialogHeight: Float,
+        val btnWidth: Float,
+        val btnHeight: Float,
+        val keyboardKeyWidth: Float,
+        val keyboardKeyHeight: Float,
+        val keyboardSpacing: Float
+    )
+
+    // ⭐ ДЛЯ ВСТАВКИ РУН
+    private var isRuneInjectionMode = false  // Режим вставки руны
+    private var selectedRuneIndex = -1       // Индекс выбранной руны для вставки
+    private var targetItemIndex = -1         // Индекс предмета, в который вставляем
+
+    private var sizes: ScreenSizes? = null
+
     private var animFrameIndex = 0
     private var animFrameTimer = 0
 
@@ -22,19 +67,62 @@ class InventoryScreen(
     private var lastClickSlot = -1
     private val DOUBLE_CLICK_DELAY = 300L
 
-    // ДЛЯ ПОДТВЕРЖДЕНИЯ УДАЛЕНИЯ
     private var showDeleteConfirm = false
     private var deleteItemIndex = -1
     private var deleteItemName = ""
 
-    // ⭐ ДЛЯ ПЕРЕИМЕНОВАНИЯ
     private var showRenameDialog = false
     private var newNameInput = ""
     private var renameError = ""
     private var isNameInputActive = false
 
-    // ⭐ РАСПОЛОЖЕНИЕ КНОПКИ РЕДАКТИРОВАНИЯ (сохраняем для обработки касаний)
     private var editButtonRect = RectF()
+
+    // ⭐ ВЫЧИСЛЕНИЕ РАЗМЕРОВ
+    private fun calculateSizes(width: Float, height: Float) {
+        // Базовый размер — 1080p, от него считаем масштаб
+        val baseWidth = 1080f
+        val baseHeight = 1920f
+        val scaleX = width / baseWidth
+        val scaleY = height / baseHeight
+        val scale = minOf(scaleX, scaleY).coerceIn(0.5f, 1.8f)  // Ограничиваем масштаб
+
+        sizes = ScreenSizes(
+            scale = scale,
+            slotSize = 160f * scale,
+            padding = 16f * scale,
+            charDisplaySize = 280f * scale,
+            charGlowRadius = 280f * scale,
+            equipmentRadius = 360f * scale,
+            equipmentSlotSize = 120f * scale,
+            gridSlotSize = 140f * scale,
+            gridPadding = 12f * scale,
+            gridStartY = height * 0.55f,
+            gridCols = 5,
+            gridRows = 4,
+            infoWidth = 680f * scale,
+            infoHeight = 560f * scale,
+            fontSizeTitle = 44f * scale,
+            fontSizeLarge = 32f * scale,
+            fontSizeMedium = 24f * scale,
+            fontSizeSmall = 18f * scale,
+            fontSizeTiny = 14f * scale,
+            closeBtnSize = 55f * scale,
+            editBtnSize = 38f * scale,
+            dialogWidth = 600f * scale,
+            dialogHeight = 680f * scale,
+            btnWidth = 150f * scale,
+            btnHeight = 50f * scale,
+            keyboardKeyWidth = 65f * scale,
+            keyboardKeyHeight = 65f * scale,
+            keyboardSpacing = 6f * scale
+        )
+    }
+
+    // ⭐ БЕЗОПАСНОЕ ПОЛУЧЕНИЕ РАЗМЕРОВ
+    private fun getSizes(): ScreenSizes {
+        return sizes ?: throw IllegalStateException("Sizes not calculated! Call calculateSizes first.")
+    }
 
     fun draw(
         canvas: Canvas,
@@ -44,8 +132,12 @@ class InventoryScreen(
         player: Player,
         gameView: GameView,
         onClose: () -> Unit,
-        onRename: (String) -> Unit
+        onRename: (String) -> Unit,
+        onShowMessage: (String) -> Unit
     ) {
+        calculateSizes(width, height)
+        val s = getSizes()
+
         // --- ФОН ---
         val bgPaint = Paint().apply {
             color = Color.argb(240, 20, 15, 30)
@@ -55,106 +147,96 @@ class InventoryScreen(
         // --- ЗАГОЛОВОК ---
         val titlePaint = Paint().apply {
             color = Color.WHITE
-            textSize = 48f
+            textSize = s.fontSizeTitle
             textAlign = Paint.Align.CENTER
             typeface = Typeface.DEFAULT_BOLD
         }
-        canvas.drawText("🎒 ИНВЕНТАРЬ", width / 2, 75f, titlePaint)
+        canvas.drawText("🎒 ИНВЕНТАРЬ", width / 2, 75f * s.scale, titlePaint)
 
-        // --- ЗОЛОТО (СЛЕВА СВЕРХУ) ---
+        // --- ЗОЛОТО ---
         val goldPaint = Paint().apply {
             color = Color.rgb(255, 215, 0)
-            textSize = 32f
+            textSize = s.fontSizeLarge
             textAlign = Paint.Align.LEFT
             typeface = Typeface.DEFAULT_BOLD
         }
-        canvas.drawText("💰 ${player.gold}", 30f, 75f, goldPaint)
+        canvas.drawText("💰 ${player.gold}", 30f * s.scale, 75f * s.scale, goldPaint)
 
-        // --- КНОПКА ЗАКРЫТИЯ (КРЕСТИК СПРАВА СВЕРХУ) ---
-        drawCloseButton(canvas, width)
+        // --- КНОПКА ЗАКРЫТИЯ ---
+        drawCloseButton(canvas, width, s)
 
         // --- ПЕРСОНАЖ ---
-        drawCharacterPreview(canvas, width, height, player, inventory, gameView)
+        drawCharacterPreview(canvas, width, height, player, inventory, gameView, s)
 
         // --- СЛОТЫ ЭКИПИРОВКИ ---
-        drawEquipmentSlots(canvas, width, height, inventory)
+        drawEquipmentSlots(canvas, width, height, inventory, s)
 
         // --- ЯЧЕЙКИ ИНВЕНТАРЯ ---
-        drawInventoryGrid(canvas, width, height, inventory)
+        drawInventoryGrid(canvas, width, height, inventory, s)
 
-        // --- ИНФОРМАЦИЯ О ВЫБРАННОМ ПРЕДМЕТЕ ---
+        // --- ИНФОРМАЦИЯ О ПРЕДМЕТЕ ---
         if (inventory.selectedSlot >= 0 && !showDeleteConfirm && !showRenameDialog) {
             val items = inventory.getItems()
             if (inventory.selectedSlot < items.size) {
                 val item = items[inventory.selectedSlot]
                 if (item != null) {
-                    drawItemInfo(canvas, width, height, item, inventory.selectedSlot)
+                    drawItemInfo(canvas, width, height, item, inventory.selectedSlot, s)
                 }
             }
         }
 
-        // ⭐ ОКНО ПОДТВЕРЖДЕНИЯ УДАЛЕНИЯ
         if (showDeleteConfirm) {
-            drawDeleteConfirm(canvas, width, height)
+            drawDeleteConfirm(canvas, width, height, s)
         }
 
-        // ⭐ ОКНО ПЕРЕИМЕНОВАНИЯ
         if (showRenameDialog) {
-            drawRenameDialog(canvas, width, height, player, onRename)
+            drawRenameDialog(canvas, width, height, player, onRename, s)
         }
     }
 
     // ⭐ КНОПКА ЗАКРЫТИЯ
-    private fun drawCloseButton(canvas: Canvas, width: Float) {
-        val closeBtnSize = 60f
-        val closeX = width - 40f
-        val closeY = 45f
-        val halfSize = closeBtnSize / 2
+    private fun drawCloseButton(canvas: Canvas, width: Float, s: ScreenSizes) {
+        // ⭐ НОВЫЕ КООРДИНАТЫ: левее и ниже
+        val closeX = width - 80f * s.scale  // ← было 40f, стало 80f (левее)
+        val closeY = 70f * s.scale          // ← было 45f, стало 70f (ниже)
+        val halfSize = s.closeBtnSize / 2 * 1.5f  // ← УВЕЛИЧИВАЕМ В 1.5 РАЗА
 
         val closeBgPaint = Paint().apply {
             color = Color.rgb(200, 50, 50)
             style = Paint.Style.FILL
         }
-        canvas.drawCircle(closeX, closeY, halfSize + 10f, closeBgPaint)
+        canvas.drawCircle(closeX, closeY, halfSize + 8f * s.scale, closeBgPaint)
 
         val glowPaint = Paint().apply {
             shader = RadialGradient(
-                closeX, closeY, halfSize + 30f,
+                closeX, closeY, halfSize + 30f * s.scale,
                 Color.argb(60, 255, 100, 100),
                 Color.TRANSPARENT,
                 Shader.TileMode.CLAMP
             )
         }
-        canvas.drawCircle(closeX, closeY, halfSize + 30f, glowPaint)
+        canvas.drawCircle(closeX, closeY, halfSize + 30f * s.scale, glowPaint)
 
         val crossPaint = Paint().apply {
             color = Color.WHITE
-            strokeWidth = 8f
+            strokeWidth = 9f * s.scale  // ← было 7f, стало 9f
             style = Paint.Style.STROKE
             strokeCap = Paint.Cap.ROUND
         }
-        val crossSize = halfSize * 0.6f
-        canvas.drawLine(
-            closeX - crossSize, closeY - crossSize,
-            closeX + crossSize, closeY + crossSize,
-            crossPaint
-        )
-        canvas.drawLine(
-            closeX + crossSize, closeY - crossSize,
-            closeX - crossSize, closeY + crossSize,
-            crossPaint
-        )
+        val crossSize = halfSize * 0.55f
+        canvas.drawLine(closeX - crossSize, closeY - crossSize, closeX + crossSize, closeY + crossSize, crossPaint)
+        canvas.drawLine(closeX + crossSize, closeY - crossSize, closeX - crossSize, closeY + crossSize, crossPaint)
 
         val borderPaint = Paint().apply {
             color = Color.argb(80, 255, 255, 255)
             style = Paint.Style.STROKE
-            strokeWidth = 2f
+            strokeWidth = 3f * s.scale  // ← было 2f, стало 3f
         }
-        canvas.drawCircle(closeX, closeY, halfSize + 10f, borderPaint)
+        canvas.drawCircle(closeX, closeY, halfSize + 8f * s.scale, borderPaint)
     }
 
     // ⭐ ОКНО ПОДТВЕРЖДЕНИЯ УДАЛЕНИЯ
-    private fun drawDeleteConfirm(canvas: Canvas, width: Float, height: Float) {
+    private fun drawDeleteConfirm(canvas: Canvas, width: Float, height: Float, s: ScreenSizes) {
         val dimPaint = Paint().apply {
             color = Color.argb(200, 0, 0, 0)
         }
@@ -163,255 +245,567 @@ class InventoryScreen(
         val dialogPaint = Paint().apply {
             color = Color.argb(240, 30, 20, 40)
         }
-        val dialogWidth = 600f
-        val dialogHeight = 350f
-        val dialogX = (width - dialogWidth) / 2
-        val dialogY = (height - dialogHeight) / 2
+        val dialogX = (width - s.dialogWidth) / 2
+        val dialogY = (height - s.dialogHeight * 0.5f) / 2
+        val dialogW = s.dialogWidth
+        val dialogH = s.dialogHeight * 0.5f
 
-        canvas.drawRoundRect(
-            RectF(dialogX, dialogY, dialogX + dialogWidth, dialogY + dialogHeight),
-            25f, 25f, dialogPaint
-        )
+        canvas.drawRoundRect(RectF(dialogX, dialogY, dialogX + dialogW, dialogY + dialogH), 25f * s.scale, 25f * s.scale, dialogPaint)
 
         val borderPaint = Paint().apply {
             color = Color.argb(100, 255, 100, 100)
             style = Paint.Style.STROKE
-            strokeWidth = 3f
+            strokeWidth = 3f * s.scale
         }
-        canvas.drawRoundRect(
-            RectF(dialogX, dialogY, dialogX + dialogWidth, dialogY + dialogHeight),
-            25f, 25f, borderPaint
-        )
+        canvas.drawRoundRect(RectF(dialogX, dialogY, dialogX + dialogW, dialogY + dialogH), 25f * s.scale, 25f * s.scale, borderPaint)
 
         val glowPaint = Paint().apply {
             shader = RadialGradient(
-                width / 2, dialogY + 60f, 300f,
+                width / 2, dialogY + 60f * s.scale, 300f * s.scale,
                 Color.argb(40, 255, 100, 100),
                 Color.TRANSPARENT,
                 Shader.TileMode.CLAMP
             )
         }
-        canvas.drawCircle(width / 2, dialogY + 60f, 300f, glowPaint)
+        canvas.drawCircle(width / 2, dialogY + 60f * s.scale, 300f * s.scale, glowPaint)
 
         val iconPaint = Paint().apply {
             color = Color.rgb(255, 200, 100)
-            textSize = 60f
+            textSize = 55f * s.scale
             textAlign = Paint.Align.CENTER
         }
-        canvas.drawText("🗑️", width / 2, dialogY + 75f, iconPaint)
+        canvas.drawText("🗑️", width / 2, dialogY + 75f * s.scale, iconPaint)
 
         val textPaint = Paint().apply {
             color = Color.WHITE
-            textSize = 34f
+            textSize = s.fontSizeLarge
             textAlign = Paint.Align.CENTER
             typeface = Typeface.DEFAULT_BOLD
         }
-        canvas.drawText("Удалить предмет?", width / 2, dialogY + 130f, textPaint)
+        canvas.drawText("Удалить предмет?", width / 2, dialogY + 130f * s.scale, textPaint)
 
         val itemPaint = Paint().apply {
             color = Color.rgb(255, 200, 100)
-            textSize = 38f
+            textSize = s.fontSizeMedium * 1.4f
             textAlign = Paint.Align.CENTER
             typeface = Typeface.DEFAULT_BOLD
         }
-        canvas.drawText(deleteItemName, width / 2, dialogY + 180f, itemPaint)
+        canvas.drawText(deleteItemName, width / 2, dialogY + 175f * s.scale, itemPaint)
 
-        val btnWidth = 160f
-        val btnHeight = 60f
-        val btnY = dialogY + 240f
+        val btnY = dialogY + dialogH - s.btnHeight - 20f * s.scale
 
         val yesPaint = Paint().apply {
             color = Color.rgb(200, 50, 50)
             style = Paint.Style.FILL
         }
         canvas.drawRoundRect(
-            RectF(dialogX + 50f, btnY, dialogX + 50f + btnWidth, btnY + btnHeight),
-            15f, 15f, yesPaint
+            RectF(dialogX + 50f * s.scale, btnY, dialogX + 50f * s.scale + s.btnWidth, btnY + s.btnHeight),
+            15f * s.scale, 15f * s.scale, yesPaint
         )
-
-        val yesGlow = Paint().apply {
-            shader = RadialGradient(
-                dialogX + 50f + btnWidth / 2, btnY + btnHeight / 2, 80f,
-                Color.argb(60, 255, 100, 100),
-                Color.TRANSPARENT,
-                Shader.TileMode.CLAMP
-            )
-        }
-        canvas.drawCircle(dialogX + 50f + btnWidth / 2, btnY + btnHeight / 2, 80f, yesGlow)
 
         val yesText = Paint().apply {
             color = Color.WHITE
-            textSize = 28f
+            textSize = s.fontSizeMedium
             textAlign = Paint.Align.CENTER
             typeface = Typeface.DEFAULT_BOLD
         }
-        canvas.drawText("ДА", dialogX + 50f + btnWidth / 2, btnY + btnHeight / 2 + 10f, yesText)
+        canvas.drawText("ДА", dialogX + 50f * s.scale + s.btnWidth / 2, btnY + s.btnHeight / 2 + 9f * s.scale, yesText)
 
         val noPaint = Paint().apply {
             color = Color.rgb(80, 80, 80)
             style = Paint.Style.FILL
         }
         canvas.drawRoundRect(
-            RectF(dialogX + dialogWidth - btnWidth - 50f, btnY, dialogX + dialogWidth - 50f, btnY + btnHeight),
-            15f, 15f, noPaint
+            RectF(dialogX + s.dialogWidth - s.btnWidth - 50f * s.scale, btnY, dialogX + s.dialogWidth - 50f * s.scale, btnY + s.btnHeight),
+            15f * s.scale, 15f * s.scale, noPaint
         )
 
         val noText = Paint().apply {
             color = Color.WHITE
-            textSize = 28f
+            textSize = s.fontSizeMedium
             textAlign = Paint.Align.CENTER
             typeface = Typeface.DEFAULT_BOLD
         }
-        canvas.drawText("НЕТ", dialogX + dialogWidth - btnWidth / 2 - 50f, btnY + btnHeight / 2 + 10f, noText)
+        canvas.drawText("НЕТ", dialogX + s.dialogWidth - s.btnWidth / 2 - 50f * s.scale, btnY + s.btnHeight / 2 + 9f * s.scale, noText)
     }
 
     // ⭐ ИНФОРМАЦИЯ О ПРЕДМЕТЕ
-    private fun drawItemInfo(canvas: Canvas, width: Float, height: Float, item: Item, index: Int) {
+    private fun drawItemInfo(canvas: Canvas, width: Float, height: Float, item: Item, index: Int, s: ScreenSizes) {
         val infoPaint = Paint().apply {
             color = Color.argb(220, 0, 0, 0)
         }
-        val infoX = 25f
-        val infoY = height * 0.45f
+        val infoX = 25f * s.scale
+        val infoY = height * 0.20f  // ← поднял ещё выше
+        val infoW = s.infoWidth
+        val infoH = s.infoHeight
 
-        canvas.drawRoundRect(
-            RectF(infoX, infoY, infoX + 500f, infoY + 280f),
-            15f, 15f, infoPaint
-        )
+        canvas.drawRoundRect(RectF(infoX, infoY, infoX + infoW, infoY + infoH), 15f * s.scale, 15f * s.scale, infoPaint)
 
+        // --- НАЗВАНИЕ (УВЕЛИЧЕНО В 2 РАЗА) ---
         val textPaint = Paint().apply {
             color = Color.WHITE
-            textSize = 28f
+            textSize = s.fontSizeMedium * 2f
             textAlign = Paint.Align.LEFT
             typeface = Typeface.DEFAULT_BOLD
         }
-        canvas.drawText("📦 ${item.name}", infoX + 20f, infoY + 45f, textPaint)
+        canvas.drawText("📦 ${item.getDisplayName()}", infoX + 25f * s.scale, infoY + 65f * s.scale, textPaint)
 
+        // --- КОЛИЧЕСТВО (для стакающихся предметов) ---
+        var currentY = infoY + 110f * s.scale
+        if (item.isStackable() && item.quantity > 1) {
+            val countPaint = Paint().apply {
+                color = Color.rgb(255, 215, 0)
+                textSize = s.fontSizeMedium * 1.8f
+                textAlign = Paint.Align.LEFT
+                typeface = Typeface.DEFAULT_BOLD
+            }
+            canvas.drawText("📦 Количество: ${item.quantity}", infoX + 25f * s.scale, currentY, countPaint)
+            currentY += 45f * s.scale
+        }
+
+        // --- УРОВЕНЬ ЗАТОЧКИ ---
+        if (item.refineLevel > 0) {
+            val refinePaint = Paint().apply {
+                color = Color.rgb(255, 215, 0)
+                textSize = s.fontSizeMedium * 1.8f
+                textAlign = Paint.Align.LEFT
+                typeface = Typeface.DEFAULT_BOLD
+            }
+            canvas.drawText("⭐ Уровень: +${item.refineLevel} ${item.getRefineStars()}", infoX + 25f * s.scale, currentY, refinePaint)
+            currentY += 45f * s.scale
+        }
+
+        // --- РЕДКОСТЬ (УВЕЛИЧЕНА В 2 РАЗА) ---
         val rarityPaint = Paint().apply {
             color = item.getRarityColor()
-            textSize = 20f
+            textSize = s.fontSizeMedium * 1.8f
             textAlign = Paint.Align.LEFT
             typeface = Typeface.DEFAULT_BOLD
         }
-        canvas.drawText("📌 ${item.getRarityName()}", infoX + 20f, infoY + 75f, rarityPaint)
+        canvas.drawText("📌 ${item.getRarityName()}", infoX + 25f * s.scale, currentY, rarityPaint)
+        currentY += 50f * s.scale
 
-        val statsPaint = Paint().apply {
-            color = Color.argb(200, 200, 200, 200)
-            textSize = 20f
-            textAlign = Paint.Align.LEFT
-        }
-        var lineY = infoY + 110f
-        if (item.stats.attack > 0) {
-            canvas.drawText("⚔️ +${item.stats.attack} атака", infoX + 20f, lineY, statsPaint)
-            lineY += 28f
-        }
-        if (item.stats.defense > 0) {
-            canvas.drawText("🛡️ +${item.stats.defense} защита", infoX + 20f, lineY, statsPaint)
-            lineY += 28f
-        }
-        if (item.stats.health > 0) {
-            canvas.drawText("❤️ +${item.stats.health} HP", infoX + 20f, lineY, statsPaint)
-            lineY += 28f
-        }
-        if (item.stats.strength > 0) {
-            canvas.drawText("💪 +${item.stats.strength} сила", infoX + 20f, lineY, statsPaint)
-            lineY += 28f
-        }
-        if (item.stats.agility > 0) {
-            canvas.drawText("💨 +${item.stats.agility} ловкость", infoX + 20f, lineY, statsPaint)
-            lineY += 28f
-        }
-        if (item.stats.luck > 0) {
-            canvas.drawText("🍀 +${item.stats.luck} удача", infoX + 20f, lineY, statsPaint)
-            lineY += 28f
+        // ⭐ СТАТЫ С УЧЁТОМ РУН (УВЕЛИЧЕНЫ В 2 РАЗА)
+        val finalStats = item.getFinalStats()
+        val runeStats = item.getRuneStats()
+
+        // --- ДЛЯ ОРУЖИЯ ---
+        if (item.type == Item.ItemType.WEAPON) {
+            val attackPaint = Paint().apply {
+                color = Color.rgb(255, 200, 100)
+                textSize = s.fontSizeMedium * 1.8f
+                textAlign = Paint.Align.LEFT
+                typeface = Typeface.DEFAULT_BOLD
+            }
+            val baseAttack = item.stats.attack
+            val refineBonus = if (item.refineLevel > 0) {
+                val percent = (ItemStats.getRefineMultiplier(item.refineLevel) * 100).toInt()
+                " (+${percent}% от заточки)"
+            } else ""
+            val runeText = if (runeStats.attack > 0) " (+${runeStats.attack} от рун)" else ""
+            canvas.drawText("⚔️ Урон: ${finalStats.attack}$refineBonus$runeText", infoX + 25f * s.scale, currentY, attackPaint)
+            currentY += 42f * s.scale
+
+            if (item.refineLevel > 0 || runeStats.attack > 0) {
+                val basePaint = Paint().apply {
+                    color = Color.argb(150, 200, 200, 200)
+                    textSize = s.fontSizeMedium * 1.4f
+                    textAlign = Paint.Align.LEFT
+                }
+                canvas.drawText("   Базовый: $baseAttack", infoX + 25f * s.scale, currentY, basePaint)
+                currentY += 35f * s.scale
+            }
         }
 
-        if (item.type == Item.ItemType.CONSUMABLE) {
+        // --- ДЛЯ БРОНИ И ЩИТОВ ---
+        else if (item.type == Item.ItemType.HELMET || item.type == Item.ItemType.CHEST ||
+            item.type == Item.ItemType.PANTS || item.type == Item.ItemType.BOOTS ||
+            item.type == Item.ItemType.GLOVES || item.type == Item.ItemType.BRACERS ||
+            item.type == Item.ItemType.SHIELD) {
+
+            val defensePaint = Paint().apply {
+                color = Color.rgb(100, 200, 255)
+                textSize = s.fontSizeMedium * 1.8f
+                textAlign = Paint.Align.LEFT
+                typeface = Typeface.DEFAULT_BOLD
+            }
+            val baseDefense = item.stats.defense
+            val refineBonus = if (item.refineLevel > 0) {
+                val percent = (ItemStats.getRefineMultiplier(item.refineLevel) * 100).toInt()
+                " (+${percent}% от заточки)"
+            } else ""
+            val runeText = if (runeStats.defense > 0) " (+${runeStats.defense} от рун)" else ""
+            canvas.drawText("🛡️ Защита: ${finalStats.defense}$refineBonus$runeText", infoX + 25f * s.scale, currentY, defensePaint)
+            currentY += 42f * s.scale
+
+            if (item.refineLevel > 0 || runeStats.defense > 0) {
+                val basePaint = Paint().apply {
+                    color = Color.argb(150, 200, 200, 200)
+                    textSize = s.fontSizeMedium * 1.4f
+                    textAlign = Paint.Align.LEFT
+                }
+                canvas.drawText("   Базовый: $baseDefense", infoX + 25f * s.scale, currentY, basePaint)
+                currentY += 35f * s.scale
+            }
+        }
+
+        // --- ДЛЯ АКСЕССУАРОВ ---
+        else if (item.type == Item.ItemType.RING || item.type == Item.ItemType.NECKLACE) {
+            val statsPaint = Paint().apply {
+                color = Color.rgb(200, 200, 255)
+                textSize = s.fontSizeMedium * 1.6f
+                textAlign = Paint.Align.LEFT
+                typeface = Typeface.DEFAULT_BOLD
+            }
+
+            if (finalStats.health > 0) {
+                val runeText = if (runeStats.health > 0) " (+${runeStats.health} от рун)" else ""
+                canvas.drawText("❤️ +${finalStats.health} HP$runeText", infoX + 25f * s.scale, currentY, statsPaint)
+                currentY += 38f * s.scale
+            }
+            if (finalStats.dodge > 0) {
+                val runeText = if (runeStats.dodge > 0) " (+${runeStats.dodge}% от рун)" else ""
+                canvas.drawText("💨 +${finalStats.dodge}% уклонения$runeText", infoX + 25f * s.scale, currentY, statsPaint)
+                currentY += 38f * s.scale
+            }
+            if (finalStats.crit > 0) {
+                val runeText = if (runeStats.crit > 0) " (+${runeStats.crit}% от рун)" else ""
+                canvas.drawText("💥 +${finalStats.crit}% крита$runeText", infoX + 25f * s.scale, currentY, statsPaint)
+                currentY += 38f * s.scale
+            }
+            if (finalStats.critDamage > 0) {
+                val runeText = if (runeStats.critDamage > 0) " (+${runeStats.critDamage}% от рун)" else ""
+                canvas.drawText("⚡ +${finalStats.critDamage}% крит. урона$runeText", infoX + 25f * s.scale, currentY, statsPaint)
+                currentY += 38f * s.scale
+            }
+            if (finalStats.hpRegen > 0) {
+                val runeText = if (runeStats.hpRegen > 0) " (+${runeStats.hpRegen} от рун)" else ""
+                canvas.drawText("🔄 +${finalStats.hpRegen} регенерации$runeText", infoX + 25f * s.scale, currentY, statsPaint)
+                currentY += 38f * s.scale
+            }
+            if (finalStats.goldBonus > 0) {
+                val runeText = if (runeStats.goldBonus > 0) " (+${runeStats.goldBonus}% от рун)" else ""
+                canvas.drawText("💰 +${finalStats.goldBonus}% золота$runeText", infoX + 25f * s.scale, currentY, statsPaint)
+                currentY += 38f * s.scale
+            }
+            if (finalStats.expBonus > 0) {
+                val runeText = if (runeStats.expBonus > 0) " (+${runeStats.expBonus}% от рун)" else ""
+                canvas.drawText("⭐ +${finalStats.expBonus}% опыта$runeText", infoX + 25f * s.scale, currentY, statsPaint)
+                currentY += 38f * s.scale
+            }
+
+            if (finalStats.health == 0 && finalStats.dodge == 0 && finalStats.crit == 0 &&
+                finalStats.critDamage == 0 && finalStats.hpRegen == 0 &&
+                finalStats.goldBonus == 0 && finalStats.expBonus == 0) {
+                val emptyPaint = Paint().apply {
+                    color = Color.argb(150, 200, 200, 200)
+                    textSize = s.fontSizeMedium * 1.6f
+                    textAlign = Paint.Align.LEFT
+                }
+                canvas.drawText("📖 Нет дополнительных статов", infoX + 25f * s.scale, currentY, emptyPaint)
+                currentY += 38f * s.scale
+            }
+        }
+
+        // --- ДЛЯ РАСХОДНИКОВ ---
+        else if (item.type == Item.ItemType.CONSUMABLE) {
             val healAmount = when (item.id) {
                 "cake_small" -> "30 HP"
                 "cake_medium" -> "60 HP"
                 "cake_large" -> "120 HP"
+                "oridecon" -> "Материал для заточки оружия"
+                "elunium" -> "Материал для заточки брони"
                 else -> ""
             }
             if (healAmount.isNotEmpty()) {
                 val healPaint = Paint().apply {
-                    color = Color.rgb(100, 255, 100)
-                    textSize = 20f
+                    color = if (item.id == "oridecon" || item.id == "elunium") {
+                        Color.rgb(200, 200, 100)
+                    } else {
+                        Color.rgb(100, 255, 100)
+                    }
+                    textSize = s.fontSizeMedium * 1.8f
                     textAlign = Paint.Align.LEFT
                     typeface = Typeface.DEFAULT_BOLD
                 }
-                canvas.drawText("❤️ Восстанавливает $healAmount", infoX + 20f, lineY, healPaint)
-                lineY += 28f
+                canvas.drawText("📖 $healAmount", infoX + 25f * s.scale, currentY, healPaint)
+                currentY += 45f * s.scale
+            }
+
+            // Для рун
+            if (item.id.startsWith("rune_")) {
+                val runePaint = Paint().apply {
+                    color = Color.rgb(255, 215, 0)
+                    textSize = s.fontSizeMedium * 1.6f
+                    textAlign = Paint.Align.LEFT
+                    typeface = Typeface.DEFAULT_BOLD
+                }
+                canvas.drawText("💎 Можно вставить в предмет с слотами", infoX + 25f * s.scale, currentY, runePaint)
+                currentY += 42f * s.scale
             }
         }
 
-        val deleteBtnX = infoX + 440f
-        val deleteBtnY = infoY + 20f
-        val deleteBtnSize = 90f
+        // ⭐ СЛОТЫ ДЛЯ РУН (УВЕЛИЧЕНЫ И СМЕЩЕНЫ НИЖЕ)
+        if (item.type != Item.ItemType.CONSUMABLE) {
+            val maxSlots = item.getMaxRuneSlots()
+            if (maxSlots > 0) {
+                // Добавляем небольшой отступ перед слотами
+                currentY += 10f * s.scale
+
+                val slotPaint = Paint().apply {
+                    color = Color.argb(150, 200, 200, 200)
+                    style = Paint.Style.STROKE
+                    strokeWidth = 3f * s.scale
+                }
+                val filledSlotPaint = Paint().apply {
+                    color = Color.rgb(255, 215, 0)
+                    style = Paint.Style.FILL
+                }
+                val slotTextPaint = Paint().apply {
+                    color = Color.WHITE
+                    textSize = s.fontSizeMedium * 1.6f
+                    textAlign = Paint.Align.CENTER
+                    typeface = Typeface.DEFAULT_BOLD
+                }
+
+                val slotStartX = infoX + 25f * s.scale
+                val slotY = currentY + 10f * s.scale
+                val slotSize = 45f * s.scale
+                val slotSpacing = 15f * s.scale
+
+                // Заголовок
+                val titlePaint = Paint().apply {
+                    color = Color.argb(200, 200, 200, 200)
+                    textSize = s.fontSizeMedium * 1.6f
+                    textAlign = Paint.Align.LEFT
+                    typeface = Typeface.DEFAULT_BOLD
+                }
+                canvas.drawText("💎 Слоты для рун:", slotStartX, slotY + slotSize * 0.7f, titlePaint)
+
+                // Рисуем каждый слот
+                for (i in 0 until maxSlots) {
+                    val x = slotStartX + 160f * s.scale + i * (slotSize + slotSpacing)
+                    val y = slotY
+
+                    if (i < item.runes.size) {
+                        canvas.drawRoundRect(
+                            RectF(x, y, x + slotSize, y + slotSize),
+                            8f * s.scale, 8f * s.scale, filledSlotPaint
+                        )
+                        val rune = item.runes[i]
+                        canvas.drawText(rune.icon, x + slotSize / 2, y + slotSize * 0.75f, slotTextPaint)
+
+                        // Название руны под слотом
+                        val runeNamePaint = Paint().apply {
+                            color = Color.argb(180, 200, 200, 200)
+                            textSize = s.fontSizeMedium * 1.0f
+                            textAlign = Paint.Align.CENTER
+                        }
+                        val shortName = if (rune.name.length > 10) rune.name.take(10) + ".." else rune.name
+                        canvas.drawText(shortName, x + slotSize / 2, y + slotSize + 22f * s.scale, runeNamePaint)
+                    } else {
+                        canvas.drawRoundRect(
+                            RectF(x, y, x + slotSize, y + slotSize),
+                            8f * s.scale, 8f * s.scale, slotPaint
+                        )
+                        val emptyPaint = Paint().apply {
+                            color = Color.argb(80, 255, 255, 255)
+                            textSize = s.fontSizeMedium * 1.4f
+                            textAlign = Paint.Align.CENTER
+                        }
+                        canvas.drawText("○", x + slotSize / 2, y + slotSize * 0.75f, emptyPaint)
+                    }
+                }
+
+                // Показываем количество занятых слотов
+                val countPaint = Paint().apply {
+                    color = Color.argb(180, 200, 200, 200)
+                    textSize = s.fontSizeMedium * 1.4f
+                    textAlign = Paint.Align.RIGHT
+                    typeface = Typeface.DEFAULT_BOLD
+                }
+                val countX = infoX + infoW - 25f * s.scale
+                canvas.drawText("${item.runes.size}/$maxSlots", countX, slotY + slotSize * 0.7f, countPaint)
+
+                currentY += slotSize + 55f * s.scale
+            }
+        }
+
+        // --- ⭐ КНОПКИ (УВЕЛИЧЕНЫ В 2 РАЗА) ---
+
+        // КНОПКА УДАЛЕНИЯ (справа сверху)
+        val deleteBtnX = infoX + infoW - 75f * s.scale
+        val deleteBtnY = infoY + 30f * s.scale
+        val deleteSize = 100f * s.scale
 
         val deleteBgPaint = Paint().apply {
             color = Color.rgb(180, 50, 50)
             style = Paint.Style.FILL
         }
-        canvas.drawCircle(deleteBtnX, deleteBtnY, deleteBtnSize / 2 + 8f, deleteBgPaint)
-
-        val deleteGlowPaint = Paint().apply {
-            shader = RadialGradient(
-                deleteBtnX, deleteBtnY, deleteBtnSize + 20f,
-                Color.argb(60, 255, 100, 100),
-                Color.TRANSPARENT,
-                Shader.TileMode.CLAMP
-            )
-        }
-        canvas.drawCircle(deleteBtnX, deleteBtnY, deleteBtnSize + 20f, deleteGlowPaint)
+        canvas.drawCircle(deleteBtnX, deleteBtnY, deleteSize / 2 + 8f * s.scale, deleteBgPaint)
 
         val deleteCross = Paint().apply {
             color = Color.WHITE
-            strokeWidth = 8f
+            strokeWidth = 8f * s.scale
             style = Paint.Style.STROKE
             strokeCap = Paint.Cap.ROUND
         }
-        val crossSize2 = 25f
-        canvas.drawLine(
-            deleteBtnX - crossSize2, deleteBtnY - crossSize2,
-            deleteBtnX + crossSize2, deleteBtnY + crossSize2,
-            deleteCross
-        )
-        canvas.drawLine(
-            deleteBtnX + crossSize2, deleteBtnY - crossSize2,
-            deleteBtnX - crossSize2, deleteBtnY + crossSize2,
-            deleteCross
-        )
+        val crossSize = deleteSize * 0.3f
+        canvas.drawLine(deleteBtnX - crossSize, deleteBtnY - crossSize, deleteBtnX + crossSize, deleteBtnY + crossSize, deleteCross)
+        canvas.drawLine(deleteBtnX + crossSize, deleteBtnY - crossSize, deleteBtnX - crossSize, deleteBtnY + crossSize, deleteCross)
 
         val deleteHint = Paint().apply {
             color = Color.argb(200, 255, 150, 150)
-            textSize = 16f
+            textSize = s.fontSizeMedium * 1.2f
             textAlign = Paint.Align.CENTER
             typeface = Typeface.DEFAULT_BOLD
         }
-        canvas.drawText("🗑️ Удалить", deleteBtnX, deleteBtnY + 75f, deleteHint)
+        canvas.drawText("🗑️", deleteBtnX, deleteBtnY + deleteSize * 0.45f + 10f * s.scale, deleteHint)
+
+        // ⭐ КНОПКА "ИНЖЕКТ" (слева, увеличена в 2 раза)
+        val injectBtnSize = 140f * s.scale
+        val injectBtnX = infoX + infoW - 320f * s.scale
+        val injectBtnY = infoY + infoH - 90f * s.scale
+        val injectBtnSpacing = 30f * s.scale  // ← отступ между кнопками
+
+        val canInject = item.getMaxRuneSlots() > 0 && item.runes.size < item.getMaxRuneSlots()
+
+        if (canInject) {
+            val injectBgPaint = Paint().apply {
+                color = Color.rgb(100, 200, 255)
+                style = Paint.Style.FILL
+            }
+            canvas.drawRoundRect(
+                RectF(injectBtnX, injectBtnY, injectBtnX + injectBtnSize, injectBtnY + injectBtnSize),
+                15f * s.scale, 15f * s.scale, injectBgPaint
+            )
+
+            val injectGlowPaint = Paint().apply {
+                shader = RadialGradient(
+                    injectBtnX + injectBtnSize / 2, injectBtnY + injectBtnSize / 2, injectBtnSize,
+                    Color.argb(60, 100, 200, 255),
+                    Color.TRANSPARENT,
+                    Shader.TileMode.CLAMP
+                )
+            }
+            canvas.drawCircle(injectBtnX + injectBtnSize / 2, injectBtnY + injectBtnSize / 2, injectBtnSize, injectGlowPaint)
+
+            val injectPaint = Paint().apply {
+                color = Color.WHITE
+                textSize = 50f * s.scale
+                textAlign = Paint.Align.CENTER
+                typeface = Typeface.DEFAULT_BOLD
+            }
+            canvas.drawText("💉", injectBtnX + injectBtnSize / 2, injectBtnY + injectBtnSize / 2 + 25f * s.scale, injectPaint)
+
+            val injectTextPaint = Paint().apply {
+                color = Color.WHITE
+                textSize = s.fontSizeMedium * 1.0f
+                textAlign = Paint.Align.CENTER
+                typeface = Typeface.DEFAULT_BOLD
+            }
+            canvas.drawText("Инжект", injectBtnX + injectBtnSize / 2, injectBtnY + injectBtnSize + 28f * s.scale, injectTextPaint)
+        } else {
+            val injectBgPaint = Paint().apply {
+                color = Color.argb(100, 100, 100, 100)
+                style = Paint.Style.FILL
+            }
+            canvas.drawRoundRect(
+                RectF(injectBtnX, injectBtnY, injectBtnX + injectBtnSize, injectBtnY + injectBtnSize),
+                15f * s.scale, 15f * s.scale, injectBgPaint
+            )
+            val injectPaint = Paint().apply {
+                color = Color.argb(100, 200, 200, 200)
+                textSize = 50f * s.scale
+                textAlign = Paint.Align.CENTER
+            }
+            canvas.drawText("💉", injectBtnX + injectBtnSize / 2, injectBtnY + injectBtnSize / 2 + 25f * s.scale, injectPaint)
+        }
+
+        // ⭐ КНОПКА ЗАТОЧКИ (справа, увеличена в 2 раза)
+        val refineBtnSize = 140f * s.scale
+        val refineBtnX = infoX + infoW - 150f * s.scale
+        val refineBtnY = infoY + infoH - 90f * s.scale
+
+        val canRefine = item.isRefinable() && item.refineLevel < 10
+
+        if (canRefine) {
+            val refineBgPaint = Paint().apply {
+                color = Color.rgb(255, 180, 50)
+                style = Paint.Style.FILL
+            }
+            canvas.drawRoundRect(
+                RectF(refineBtnX, refineBtnY, refineBtnX + refineBtnSize, refineBtnY + refineBtnSize),
+                15f * s.scale, 15f * s.scale, refineBgPaint
+            )
+
+            val refineGlowPaint = Paint().apply {
+                shader = RadialGradient(
+                    refineBtnX + refineBtnSize / 2, refineBtnY + refineBtnSize / 2, refineBtnSize,
+                    Color.argb(60, 255, 200, 100),
+                    Color.TRANSPARENT,
+                    Shader.TileMode.CLAMP
+                )
+            }
+            canvas.drawCircle(refineBtnX + refineBtnSize / 2, refineBtnY + refineBtnSize / 2, refineBtnSize, refineGlowPaint)
+
+            val hammerPaint = Paint().apply {
+                color = Color.WHITE
+                textSize = 60f * s.scale
+                textAlign = Paint.Align.CENTER
+                typeface = Typeface.DEFAULT_BOLD
+            }
+            canvas.drawText("🔨", refineBtnX + refineBtnSize / 2, refineBtnY + refineBtnSize / 2 + 28f * s.scale, hammerPaint)
+
+            val refineTextPaint = Paint().apply {
+                color = Color.WHITE
+                textSize = s.fontSizeMedium * 1.0f
+                textAlign = Paint.Align.CENTER
+                typeface = Typeface.DEFAULT_BOLD
+            }
+            canvas.drawText("Заточка", refineBtnX + refineBtnSize / 2, refineBtnY + refineBtnSize + 28f * s.scale, refineTextPaint)
+        } else {
+            val refineBgPaint = Paint().apply {
+                color = Color.argb(100, 100, 100, 100)
+                style = Paint.Style.FILL
+            }
+            canvas.drawRoundRect(
+                RectF(refineBtnX, refineBtnY, refineBtnX + refineBtnSize, refineBtnY + refineBtnSize),
+                15f * s.scale, 15f * s.scale, refineBgPaint
+            )
+
+            val hammerPaint = Paint().apply {
+                color = Color.argb(100, 200, 200, 200)
+                textSize = 60f * s.scale
+                textAlign = Paint.Align.CENTER
+            }
+            canvas.drawText("🔨", refineBtnX + refineBtnSize / 2, refineBtnY + refineBtnSize / 2 + 28f * s.scale, hammerPaint)
+        }
     }
 
-    // ⭐ ПРЕДПРОСМОТР ПЕРСОНАЖА С КНОПКОЙ РЕДАКТИРОВАНИЯ
+    // ⭐ ПРЕДПРОСМОТР ПЕРСОНАЖА
     private fun drawCharacterPreview(
         canvas: Canvas,
         width: Float,
         height: Float,
         player: Player,
         inventory: Inventory,
-        gameView: GameView
+        gameView: GameView,
+        s: ScreenSizes
     ) {
         val centerX = width / 2
         val centerY = height * 0.30f
+        val displaySize = s.charDisplaySize
 
         val glowPaint = Paint().apply {
             shader = RadialGradient(
-                centerX, centerY, 280f,
+                centerX, centerY, s.charGlowRadius,
                 Color.argb(60, 100, 200, 255),
                 Color.TRANSPARENT,
                 Shader.TileMode.CLAMP
             )
         }
-        canvas.drawCircle(centerX, centerY, 280f, glowPaint)
+        canvas.drawCircle(centerX, centerY, s.charGlowRadius, glowPaint)
 
         val animationFrames = gameView.getCharacterIdleFrames()
         val spriteSheet = gameView.getCharacterIdleSpriteSheet()
@@ -424,7 +818,6 @@ class InventoryScreen(
             }
 
             val currentFrame = animationFrames[animFrameIndex % animationFrames.size]
-            val displaySize = 300f
             val dstRect = RectF(
                 centerX - displaySize / 2,
                 centerY - displaySize / 2,
@@ -438,98 +831,49 @@ class InventoryScreen(
             val weapon = inventory.getEquipment(EquipmentSlot.WEAPON)
             if (weapon != null) {
                 val weaponIcon = loadItemIcon(weapon)
+                val iconSize = displaySize * 0.4f
                 if (weaponIcon != null) {
-                    val iconSize = 120f
                     val dstRectWeapon = RectF(
-                        centerX + 160f - iconSize / 2,
-                        centerY - 10f - iconSize / 2,
-                        centerX + 160f + iconSize / 2,
-                        centerY - 10f + iconSize / 2
+                        centerX + displaySize * 0.55f - iconSize / 2,
+                        centerY - iconSize / 2,
+                        centerX + displaySize * 0.55f + iconSize / 2,
+                        centerY + iconSize / 2
                     )
                     canvas.drawBitmap(weaponIcon, null, dstRectWeapon, null)
                 } else {
-                    val weaponEmoji = when (weapon.id) {
-                        "sword_01" -> "🗡️"
-                        else -> "⚔️"
-                    }
                     val weaponPaint = Paint().apply {
                         color = Color.YELLOW
-                        textSize = 100f
+                        textSize = iconSize
                         textAlign = Paint.Align.CENTER
                     }
-                    canvas.drawText(weaponEmoji, centerX + 160f, centerY + 35f, weaponPaint)
+                    canvas.drawText("⚔️", centerX + displaySize * 0.55f, centerY + iconSize * 0.35f, weaponPaint)
                 }
 
                 val weaponNamePaint = Paint().apply {
                     color = Color.argb(200, 255, 215, 0)
-                    textSize = 20f
+                    textSize = s.fontSizeTiny
                     textAlign = Paint.Align.CENTER
                     typeface = Typeface.DEFAULT_BOLD
                 }
-                val shortName = if (weapon.name.length > 12) weapon.name.take(12) + ".." else weapon.name
-                canvas.drawText(shortName, centerX + 160f, centerY + 85f, weaponNamePaint)
-
-                if (weapon.stats.attack > 0) {
-                    val statPaint = Paint().apply {
-                        color = Color.argb(150, 255, 200, 100)
-                        textSize = 16f
-                        textAlign = Paint.Align.CENTER
-                    }
-                    canvas.drawText(
-                        "⚔️ +${weapon.stats.attack} атаки",
-                        centerX + 160f,
-                        centerY + 110f,
-                        statPaint
-                    )
-                }
-            } else {
-                val hintPaint = Paint().apply {
-                    color = Color.argb(80, 255, 255, 255)
-                    textSize = 16f
-                    textAlign = Paint.Align.CENTER
-                }
-                canvas.drawText("🗡️ слот оружия пуст", centerX + 160f, centerY + 50f, hintPaint)
-            }
-
-            // Щит
-            val shield = inventory.getEquipment(EquipmentSlot.SHIELD)
-            if (shield != null) {
-                val shieldIcon = loadItemIcon(shield)
-                if (shieldIcon != null) {
-                    val iconSize = 100f
-                    val dstRectShield = RectF(
-                        centerX - 160f - iconSize / 2,
-                        centerY - 10f - iconSize / 2,
-                        centerX - 160f + iconSize / 2,
-                        centerY - 10f + iconSize / 2
-                    )
-                    canvas.drawBitmap(shieldIcon, null, dstRectShield, null)
-                } else {
-                    val shieldPaint = Paint().apply {
-                        color = Color.CYAN
-                        textSize = 80f
-                        textAlign = Paint.Align.CENTER
-                    }
-                    canvas.drawText("🛡️", centerX - 160f, centerY + 30f, shieldPaint)
-                }
+                val shortName = if (weapon.name.length > 10) weapon.name.take(10) + ".." else weapon.name
+                canvas.drawText(shortName, centerX + displaySize * 0.55f, centerY + iconSize * 0.75f, weaponNamePaint)
             }
 
             // ⭐ ИМЯ С КНОПКОЙ РЕДАКТИРОВАНИЯ
             val namePaint = Paint().apply {
                 color = Color.WHITE
-                textSize = 34f
+                textSize = s.fontSizeLarge
                 textAlign = Paint.Align.CENTER
                 typeface = Typeface.DEFAULT_BOLD
             }
             val nameText = "${player.name} Ур.${player.level}"
-            canvas.drawText(nameText, centerX, centerY + displaySize / 2 + 50f, namePaint)
+            canvas.drawText(nameText, centerX, centerY + displaySize / 2 + 45f * s.scale, namePaint)
 
-            // ⭐ КНОПКА РЕДАКТИРОВАНИЯ (карандашик)
-            val editX = centerX + 150f
-            val editY = centerY + displaySize / 2 + 50f - 10f
-            val editSize = 40f
+            // Кнопка редактирования
+            val editX = centerX + displaySize * 0.5f
+            val editY = centerY + displaySize / 2 + 45f * s.scale - 5f * s.scale
+            val editSize = s.editBtnSize
 
-            // Сохраняем координаты для обработки касаний
             editButtonRect.set(
                 editX - editSize / 2,
                 editY - editSize / 2,
@@ -541,40 +885,34 @@ class InventoryScreen(
                 color = Color.argb(150, 255, 200, 50)
                 style = Paint.Style.FILL
             }
-            canvas.drawRoundRect(
-                editButtonRect,
-                10f, 10f, editBgPaint
-            )
+            canvas.drawRoundRect(editButtonRect, 10f * s.scale, 10f * s.scale, editBgPaint)
 
             val editBorderPaint = Paint().apply {
                 color = Color.argb(200, 255, 215, 0)
                 style = Paint.Style.STROKE
-                strokeWidth = 2f
+                strokeWidth = 2f * s.scale
             }
-            canvas.drawRoundRect(
-                editButtonRect,
-                10f, 10f, editBorderPaint
-            )
+            canvas.drawRoundRect(editButtonRect, 10f * s.scale, 10f * s.scale, editBorderPaint)
 
             val editIconPaint = Paint().apply {
                 color = Color.WHITE
-                textSize = 28f
+                textSize = editSize * 0.65f
                 textAlign = Paint.Align.CENTER
                 typeface = Typeface.DEFAULT_BOLD
             }
-            canvas.drawText("✏️", editX, editY + 10f, editIconPaint)
+            canvas.drawText("✏️", editX, editY + editSize * 0.3f, editIconPaint)
 
             // Статы
             val stats = inventory.getTotalStats()
             val statsPaint = Paint().apply {
                 color = Color.argb(200, 255, 255, 200)
-                textSize = 26f
+                textSize = s.fontSizeMedium
                 textAlign = Paint.Align.CENTER
             }
             canvas.drawText(
-                "⚔️${stats.attack}  🛡️${stats.defense}  ❤️${stats.health}  💨${stats.agility}  💪${stats.strength}  🍀${stats.luck}",
+                "⚔️${stats.attack}  🛡️${stats.defense}  ❤️${stats.health}",
                 centerX,
-                centerY + displaySize / 2 + 95f,
+                centerY + displaySize / 2 + 95f * s.scale,
                 statsPaint
             )
 
@@ -583,34 +921,35 @@ class InventoryScreen(
             val avatarPaint = Paint().apply {
                 color = Color.rgb(50, 150, 255)
             }
-            canvas.drawCircle(centerX, centerY, 220f, avatarPaint)
+            val fallbackSize = displaySize * 0.7f
+            canvas.drawCircle(centerX, centerY, fallbackSize, avatarPaint)
 
             val namePaint = Paint().apply {
                 color = Color.WHITE
-                textSize = 80f
+                textSize = displaySize * 0.25f
                 textAlign = Paint.Align.CENTER
                 typeface = Typeface.DEFAULT_BOLD
             }
-            canvas.drawText("⚔️", centerX, centerY + 70f, namePaint)
+            canvas.drawText("⚔️", centerX, centerY + displaySize * 0.2f, namePaint)
 
             val namePaint2 = Paint().apply {
                 color = Color.WHITE
-                textSize = 28f
+                textSize = s.fontSizeMedium
                 textAlign = Paint.Align.CENTER
                 typeface = Typeface.DEFAULT_BOLD
             }
-            canvas.drawText("${player.name} Ур.${player.level}", centerX, centerY + 200f, namePaint2)
+            canvas.drawText("${player.name} Ур.${player.level}", centerX, centerY + fallbackSize + 30f * s.scale, namePaint2)
         }
     }
 
     // ⭐ ОКНО ПЕРЕИМЕНОВАНИЯ
-// ⭐ ОКНО ПЕРЕИМЕНОВАНИЯ
     private fun drawRenameDialog(
         canvas: Canvas,
         width: Float,
         height: Float,
         player: Player,
-        onRename: (String) -> Unit
+        onRename: (String) -> Unit,
+        s: ScreenSizes
     ) {
         val dimPaint = Paint().apply {
             color = Color.argb(200, 0, 0, 0)
@@ -620,116 +959,86 @@ class InventoryScreen(
         val dialogPaint = Paint().apply {
             color = Color.argb(240, 30, 20, 40)
         }
-        val dialogWidth = 640f
-        val dialogHeight = 720f  // ← УВЕЛИЧЕНО с 580f до 720f
-        val dialogX = (width - dialogWidth) / 2
-        val dialogY = (height - dialogHeight) / 2
+        val dialogX = (width - s.dialogWidth) / 2
+        val dialogY = (height - s.dialogHeight) / 2
 
-        canvas.drawRoundRect(
-            RectF(dialogX, dialogY, dialogX + dialogWidth, dialogY + dialogHeight),
-            25f, 25f, dialogPaint
-        )
+        canvas.drawRoundRect(RectF(dialogX, dialogY, dialogX + s.dialogWidth, dialogY + s.dialogHeight), 25f * s.scale, 25f * s.scale, dialogPaint)
 
         val borderPaint = Paint().apply {
             color = Color.argb(100, 255, 215, 0)
             style = Paint.Style.STROKE
-            strokeWidth = 3f
+            strokeWidth = 3f * s.scale
         }
-        canvas.drawRoundRect(
-            RectF(dialogX, dialogY, dialogX + dialogWidth, dialogY + dialogHeight),
-            25f, 25f, borderPaint
-        )
+        canvas.drawRoundRect(RectF(dialogX, dialogY, dialogX + s.dialogWidth, dialogY + s.dialogHeight), 25f * s.scale, 25f * s.scale, borderPaint)
 
-        // Заголовок
         val titlePaint = Paint().apply {
             color = Color.WHITE
-            textSize = 36f
+            textSize = s.fontSizeLarge
             textAlign = Paint.Align.CENTER
             typeface = Typeface.DEFAULT_BOLD
         }
-        canvas.drawText("✏️ Переименовать", width / 2, dialogY + 60f, titlePaint)
+        canvas.drawText("✏️ Переименовать", width / 2, dialogY + 60f * s.scale, titlePaint)
 
-        // Информация о стоимости
         val costPaint = Paint().apply {
             color = Color.rgb(255, 215, 0)
-            textSize = 24f
+            textSize = s.fontSizeMedium
             textAlign = Paint.Align.CENTER
             typeface = Typeface.DEFAULT_BOLD
         }
-        canvas.drawText("Стоимость: 500 💰", width / 2, dialogY + 100f, costPaint)
+        canvas.drawText("Стоимость: 500 💰", width / 2, dialogY + 100f * s.scale, costPaint)
 
-        // Текущее имя
         val currentNamePaint = Paint().apply {
             color = Color.argb(150, 200, 200, 200)
-            textSize = 20f
+            textSize = s.fontSizeSmall
             textAlign = Paint.Align.CENTER
         }
-        canvas.drawText("Текущее имя: ${player.name}", width / 2, dialogY + 140f, currentNamePaint)
+        canvas.drawText("Текущее имя: ${player.name}", width / 2, dialogY + 140f * s.scale, currentNamePaint)
 
         // Поле ввода
         val inputBgPaint = Paint().apply {
             color = Color.argb(150, 255, 255, 255)
         }
-        val inputX = dialogX + 50f
-        val inputY = dialogY + 170f  // ← чуть ниже
-        val inputWidth = dialogWidth - 100f
-        val inputHeight = 50f
-        canvas.drawRoundRect(
-            RectF(inputX, inputY, inputX + inputWidth, inputY + inputHeight),
-            12f, 12f, inputBgPaint
-        )
+        val inputX = dialogX + 50f * s.scale
+        val inputY = dialogY + 170f * s.scale
+        val inputWidth = s.dialogWidth - 100f * s.scale
+        val inputHeight = 50f * s.scale
+        canvas.drawRoundRect(RectF(inputX, inputY, inputX + inputWidth, inputY + inputHeight), 12f * s.scale, 12f * s.scale, inputBgPaint)
 
-        // Подсветка активного поля
         if (isNameInputActive) {
             val activePaint = Paint().apply {
                 color = Color.argb(80, 255, 215, 0)
                 style = Paint.Style.STROKE
-                strokeWidth = 3f
+                strokeWidth = 3f * s.scale
             }
-            canvas.drawRoundRect(
-                RectF(inputX, inputY, inputX + inputWidth, inputY + inputHeight),
-                12f, 12f, activePaint
-            )
+            canvas.drawRoundRect(RectF(inputX, inputY, inputX + inputWidth, inputY + inputHeight), 12f * s.scale, 12f * s.scale, activePaint)
         }
 
-        // Текст ввода
         val inputTextPaint = Paint().apply {
             color = Color.BLACK
-            textSize = 28f
+            textSize = s.fontSizeMedium
             textAlign = Paint.Align.CENTER
             typeface = Typeface.DEFAULT_BOLD
         }
         val displayText = if (newNameInput.isEmpty()) "Введите новое имя..." else newNameInput
-        val textColor = if (newNameInput.isEmpty()) Color.argb(150, 100, 100, 100) else Color.BLACK
-        inputTextPaint.color = textColor
-        canvas.drawText(displayText, width / 2, inputY + 38f, inputTextPaint)
+        inputTextPaint.color = if (newNameInput.isEmpty()) Color.argb(150, 100, 100, 100) else Color.BLACK
+        canvas.drawText(displayText, width / 2, inputY + 38f * s.scale, inputTextPaint)
 
-        // Ошибка
         if (renameError.isNotEmpty()) {
             val errorPaint = Paint().apply {
                 color = Color.RED
-                textSize = 18f
+                textSize = s.fontSizeSmall
                 textAlign = Paint.Align.CENTER
                 typeface = Typeface.DEFAULT_BOLD
             }
-            canvas.drawText(renameError, width / 2, inputY + inputHeight + 30f, errorPaint)
+            canvas.drawText(renameError, width / 2, inputY + inputHeight + 30f * s.scale, errorPaint)
         }
 
-        // ⭐ КЛАВИАТУРА — позиция вычисляется относительно поля ввода
-        val keyboardStartY = inputY + inputHeight + 80f  // ← отступ от поля ввода
-        drawKeyboard(canvas, dialogX, keyboardStartY, dialogWidth)
+        // ⭐ КЛАВИАТУРА
+        val keyboardStartY = inputY + inputHeight + 80f * s.scale
+        drawKeyboard(canvas, dialogX, keyboardStartY, s)
 
-        // ⭐ КНОПКИ ДЕЙСТВИЙ — РАСПОЛОЖЕНЫ НИЖЕ КЛАВИАТУРЫ
-        val btnWidth = 155f
-        val btnHeight = 50f
-        val btnSpacing = 20f  // ← отступ от клавиатуры
-
-        // Вычисляем высоту клавиатуры: 3 ряда * (keyHeight + keySpacing) + отступы
-        val keyHeight = 70f
-        val keySpacing = 8f
-        val keyboardHeight = 3 * (keyHeight + keySpacing) + 30f  // ~264f
-
-        val btnY = keyboardStartY + keyboardHeight + btnSpacing
+        // ⭐ КНОПКИ ДЕЙСТВИЙ
+        val btnY = keyboardStartY + (3 * (s.keyboardKeyHeight + s.keyboardSpacing) + 30f * s.scale) + 20f * s.scale
 
         val canRename = newNameInput.isNotEmpty() && newNameInput.length >= 2 && player.gold >= 500
         val acceptPaint = Paint().apply {
@@ -737,42 +1046,42 @@ class InventoryScreen(
             style = Paint.Style.FILL
         }
         canvas.drawRoundRect(
-            RectF(dialogX + 50f, btnY, dialogX + 50f + btnWidth, btnY + btnHeight),
-            12f, 12f, acceptPaint
+            RectF(dialogX + 50f * s.scale, btnY, dialogX + 50f * s.scale + s.btnWidth, btnY + s.btnHeight),
+            12f * s.scale, 12f * s.scale, acceptPaint
         )
         val acceptTextPaint = Paint().apply {
             color = if (canRename) Color.WHITE else Color.argb(150, 200, 200, 200)
-            textSize = 24f
+            textSize = s.fontSizeMedium
             textAlign = Paint.Align.CENTER
             typeface = Typeface.DEFAULT_BOLD
         }
-        canvas.drawText("✅ Принять", dialogX + 50f + btnWidth / 2, btnY + btnHeight / 2 + 8f, acceptTextPaint)
+        canvas.drawText("✅ Принять", dialogX + 50f * s.scale + s.btnWidth / 2, btnY + s.btnHeight / 2 + 8f * s.scale, acceptTextPaint)
 
         val cancelPaint = Paint().apply {
             color = Color.rgb(200, 50, 50)
             style = Paint.Style.FILL
         }
         canvas.drawRoundRect(
-            RectF(dialogX + dialogWidth - btnWidth - 50f, btnY, dialogX + dialogWidth - 50f, btnY + btnHeight),
-            12f, 12f, cancelPaint
+            RectF(dialogX + s.dialogWidth - s.btnWidth - 50f * s.scale, btnY, dialogX + s.dialogWidth - 50f * s.scale, btnY + s.btnHeight),
+            12f * s.scale, 12f * s.scale, cancelPaint
         )
         val cancelTextPaint = Paint().apply {
             color = Color.WHITE
-            textSize = 24f
+            textSize = s.fontSizeMedium
             textAlign = Paint.Align.CENTER
             typeface = Typeface.DEFAULT_BOLD
         }
-        canvas.drawText("❌ Отмена", dialogX + dialogWidth - btnWidth / 2 - 50f, btnY + btnHeight / 2 + 8f, cancelTextPaint)
+        canvas.drawText("❌ Отмена", dialogX + s.dialogWidth - s.btnWidth / 2 - 50f * s.scale, btnY + s.btnHeight / 2 + 8f * s.scale, cancelTextPaint)
     }
 
     // ⭐ КЛАВИАТУРА
-    private fun drawKeyboard(canvas: Canvas, startX: Float, startY: Float, parentWidth: Float) {
-        val keyWidth = 70f
-        val keyHeight = 70f
-        val keySpacing = 8f
+    private fun drawKeyboard(canvas: Canvas, startX: Float, startY: Float, s: ScreenSizes) {
+        val keyWidth = s.keyboardKeyWidth
+        val keyHeight = s.keyboardKeyHeight
+        val keySpacing = s.keyboardSpacing
         val keyboardWidth = 10 * (keyWidth + keySpacing) - keySpacing
-        val offsetX = (parentWidth - keyboardWidth) / 2
-        val keyX = startX + offsetX
+        val offsetX = (s.dialogWidth - keyboardWidth) / 2
+        val x = startX + offsetX
 
         val rows = listOf(
             "ЙЦУКЕНГШЩЗХЪ",
@@ -787,59 +1096,45 @@ class InventoryScreen(
         val keyBorderPaint = Paint().apply {
             color = Color.argb(80, 255, 255, 255)
             style = Paint.Style.STROKE
-            strokeWidth = 2.5f
+            strokeWidth = 2f * s.scale
         }
         val keyTextPaint = Paint().apply {
             color = Color.WHITE
-            textSize = 28f
+            textSize = s.fontSizeMedium * 0.85f
             textAlign = Paint.Align.CENTER
             typeface = Typeface.DEFAULT_BOLD
         }
 
         for ((rowIndex, row) in rows.withIndex()) {
-            val y = startY + rowIndex * (keyHeight + keySpacing) + 20f
+            val y = startY + rowIndex * (keyHeight + keySpacing) + 15f * s.scale
             val rowWidth = row.length * (keyWidth + keySpacing) - keySpacing
-            val rowOffsetX = (parentWidth - rowWidth) / 2
-            val x = startX + rowOffsetX
+            val rowOffsetX = (s.dialogWidth - rowWidth) / 2
+            val xPos = startX + rowOffsetX
 
             for ((charIndex, char) in row.withIndex()) {
-                val xPos = x + charIndex * (keyWidth + keySpacing)
+                val keyXPos = xPos + charIndex * (keyWidth + keySpacing)
 
-                canvas.drawRoundRect(
-                    RectF(xPos, y, xPos + keyWidth, y + keyHeight),
-                    10f, 10f, keyPaint
-                )
-                canvas.drawRoundRect(
-                    RectF(xPos, y, xPos + keyWidth, y + keyHeight),
-                    10f, 10f, keyBorderPaint
-                )
+                canvas.drawRoundRect(RectF(keyXPos, y, keyXPos + keyWidth, y + keyHeight), 10f * s.scale, 10f * s.scale, keyPaint)
+                canvas.drawRoundRect(RectF(keyXPos, y, keyXPos + keyWidth, y + keyHeight), 10f * s.scale, 10f * s.scale, keyBorderPaint)
 
-                // Кнопка Backspace в правом верхнем углу
                 if (rowIndex == 0 && charIndex == row.length - 1) {
-                    keyTextPaint.textSize = 34f
-                    canvas.drawText("⌫", xPos + keyWidth / 2, y + keyHeight / 2 + 7f, keyTextPaint)
-                    keyTextPaint.textSize = 40f
+                    keyTextPaint.textSize = s.fontSizeMedium * 0.7f
+                    canvas.drawText("⌫", keyXPos + keyWidth / 2, y + keyHeight / 2 + 8f * s.scale, keyTextPaint)
+                    keyTextPaint.textSize = s.fontSizeMedium * 0.85f
                 } else if (rowIndex == 2 && charIndex == row.length - 1) {
-                    // Кнопка "Пробел" в последнем ряду
                     val spaceWidth = keyWidth * 3 + keySpacing * 2
                     val spacePaint = Paint().apply {
                         color = Color.rgb(60, 60, 80)
                         style = Paint.Style.FILL
                     }
-                    canvas.drawRoundRect(
-                        RectF(xPos, y, xPos + spaceWidth, y + keyHeight),
-                        10f, 10f, spacePaint
-                    )
-                    canvas.drawRoundRect(
-                        RectF(xPos, y, xPos + spaceWidth, y + keyHeight),
-                        10f, 10f, keyBorderPaint
-                    )
-                    keyTextPaint.textSize = 24f
-                    canvas.drawText("ПРОБЕЛ", xPos + spaceWidth / 2, y + keyHeight / 2 + 10f, keyTextPaint)
-                    keyTextPaint.textSize = 28f
+                    canvas.drawRoundRect(RectF(keyXPos, y, keyXPos + spaceWidth, y + keyHeight), 10f * s.scale, 10f * s.scale, spacePaint)
+                    canvas.drawRoundRect(RectF(keyXPos, y, keyXPos + spaceWidth, y + keyHeight), 10f * s.scale, 10f * s.scale, keyBorderPaint)
+                    keyTextPaint.textSize = s.fontSizeMedium * 0.7f
+                    canvas.drawText("ПРОБЕЛ", keyXPos + spaceWidth / 2, y + keyHeight / 2 + 8f * s.scale, keyTextPaint)
+                    keyTextPaint.textSize = s.fontSizeMedium * 0.85f
                     break
                 } else {
-                    canvas.drawText(char.toString(), xPos + keyWidth / 2, y + keyHeight / 2 + 10f, keyTextPaint)
+                    canvas.drawText(char.toString(), keyXPos + keyWidth / 2, y + keyHeight / 2 + 10f * s.scale, keyTextPaint)
                 }
             }
         }
@@ -850,22 +1145,26 @@ class InventoryScreen(
         canvas: Canvas,
         width: Float,
         height: Float,
-        inventory: Inventory
+        inventory: Inventory,
+        s: ScreenSizes
     ) {
         val centerX = width / 2
         val centerY = height * 0.30f
-        val radius = 400f
+        val radius = s.equipmentRadius
+        val slotSize = s.equipmentSlotSize
 
         val slots = listOf(
             EquipmentSlot.HELMET to -90f,
             EquipmentSlot.WEAPON to -150f,
             EquipmentSlot.SHIELD to -30f,
             EquipmentSlot.CHEST to 0f,
-            EquipmentSlot.GLOVES to 60f,
+            EquipmentSlot.GLOVES to 240f,
             EquipmentSlot.BRACERS to 120f,
             EquipmentSlot.PANTS to 180f,
-            EquipmentSlot.BOOTS to 240f,
-            EquipmentSlot.NECKLACE to 300f
+            EquipmentSlot.BOOTS to 60f,
+            EquipmentSlot.NECKLACE to 300f,
+            EquipmentSlot.RING1 to -210f,
+            EquipmentSlot.RING2 to -270f
         )
 
         for ((slot, angleDeg) in slots) {
@@ -881,8 +1180,8 @@ class InventoryScreen(
                 }
             }
             canvas.drawRoundRect(
-                RectF(x - 70f, y - 70f, x + 70f, y + 70f),
-                15f, 15f, slotPaint
+                RectF(x - slotSize / 2, y - slotSize / 2, x + slotSize / 2, y + slotSize / 2),
+                15f * s.scale, 15f * s.scale, slotPaint
             )
 
             val item = inventory.getEquipment(slot)
@@ -890,25 +1189,25 @@ class InventoryScreen(
             if (item == null) {
                 val iconPaint = Paint().apply {
                     color = Color.WHITE
-                    textSize = 40f
+                    textSize = slotSize * 0.5f
                     textAlign = Paint.Align.CENTER
                     typeface = Typeface.DEFAULT_BOLD
                 }
-                canvas.drawText(getSlotIcon(slot), x, y + 14f, iconPaint)
+                canvas.drawText(getSlotIcon(slot), x, y + slotSize * 0.2f, iconPaint)
             } else {
                 val borderPaint = Paint().apply {
                     color = Color.YELLOW
                     style = Paint.Style.STROKE
-                    strokeWidth = 5f
+                    strokeWidth = 4f * s.scale
                 }
                 canvas.drawRoundRect(
-                    RectF(x - 70f, y - 70f, x + 70f, y + 70f),
-                    15f, 15f, borderPaint
+                    RectF(x - slotSize / 2, y - slotSize / 2, x + slotSize / 2, y + slotSize / 2),
+                    15f * s.scale, 15f * s.scale, borderPaint
                 )
 
                 val icon = loadItemIcon(item)
                 if (icon != null) {
-                    val iconSize = 80f
+                    val iconSize = slotSize * 0.65f
                     val dstRect = RectF(
                         x - iconSize / 2,
                         y - iconSize / 2,
@@ -919,39 +1218,38 @@ class InventoryScreen(
                 } else {
                     val emojiPaint = Paint().apply {
                         color = Color.WHITE
-                        textSize = 55f
+                        textSize = slotSize * 0.55f
                         textAlign = Paint.Align.CENTER
                     }
-                    val emoji = when (item.id) {
-                        "sword_01" -> "🗡️"
-                        "crusader_shield" -> "🛡️"
-                        else -> "📦"
-                    }
-                    canvas.drawText(emoji, x, y + 20f, emojiPaint)
+                    canvas.drawText("📦", x, y + slotSize * 0.25f, emojiPaint)
                 }
 
                 val namePaint = Paint().apply {
                     color = Color.GREEN
-                    textSize = 16f
+                    textSize = s.fontSizeTiny
                     textAlign = Paint.Align.CENTER
                     typeface = Typeface.DEFAULT_BOLD
                 }
-                val shortName = if (item.name.length > 8) item.name.take(8) + ".." else item.name
-                canvas.drawText(shortName, x, y + 95f, namePaint)
+                val shortName = if (item.name.length > 6) item.name.take(6) + ".." else item.name
+                canvas.drawText(shortName, x, y + slotSize / 2 + s.fontSizeTiny * 0.6f, namePaint)
             }
         }
     }
 
+    // ⭐ ЯЧЕЙКИ ИНВЕНТАРЯ
     // ⭐ ЯЧЕЙКИ ИНВЕНТАРЯ
     private fun drawInventoryGrid(
         canvas: Canvas,
         width: Float,
         height: Float,
         inventory: Inventory,
+        s: ScreenSizes
     ) {
-        val startY = height * 0.58f
-        val cols = 5
-        val rows = 4
+        val slotSize = s.gridSlotSize
+        val padding = s.gridPadding
+        val startY = s.gridStartY
+        val cols = s.gridCols
+        val rows = s.gridRows
         val totalWidth = cols * (slotSize + padding) - padding
         val startX = (width - totalWidth) / 2
 
@@ -963,6 +1261,7 @@ class InventoryScreen(
                 val x = startX + col * (slotSize + padding)
                 val y = startY + row * (slotSize + padding)
 
+                // Фон ячейки
                 val cellPaint = Paint().apply {
                     color = if (inventory.selectedSlot == index) {
                         Color.argb(180, 255, 255, 100)
@@ -970,78 +1269,207 @@ class InventoryScreen(
                         Color.argb(100, 80, 80, 100)
                     }
                 }
-                canvas.drawRoundRect(
-                    RectF(x, y, x + slotSize, y + slotSize),
-                    12f, 12f, cellPaint
-                )
+                canvas.drawRoundRect(RectF(x, y, x + slotSize, y + slotSize), 12f * s.scale, 12f * s.scale, cellPaint)
 
                 if (index < items.size) {
                     val item = items[index]
                     if (item != null) {
-                        val icon = loadItemIcon(item)
-                        if (icon != null) {
-                            val iconSize = 100f
-                            val dstRect = RectF(
-                                x + (slotSize - iconSize) / 2,
-                                y + (slotSize - iconSize) / 2 - 10f,
-                                x + (slotSize + iconSize) / 2,
-                                y + (slotSize + iconSize) / 2 - 10f
+                        // ⭐ ПРОВЕРЯЕМ, В РЕЖИМЕ ЛИ ИНЖЕКТА И ЭТО РУНА
+                        val isRune = item.id.startsWith("rune_")
+                        val isSelectableRune = isRuneInjectionMode && isRune
+
+                        // Если в режиме инжекта — подсвечиваем руны
+                        if (isSelectableRune) {
+                            val glowPaint = Paint().apply {
+                                color = Color.argb(80, 255, 215, 0)
+                                style = Paint.Style.FILL
+                            }
+                            canvas.drawRoundRect(
+                                RectF(x - 4f * s.scale, y - 4f * s.scale,
+                                    x + slotSize + 4f * s.scale, y + slotSize + 4f * s.scale),
+                                16f * s.scale, 16f * s.scale, glowPaint
                             )
-                            drawItemRarity(canvas, x, y, slotSize, slotSize, item.rarity)
-                            canvas.drawBitmap(icon, null, dstRect, null)
-                        } else {
-                            val emojiPaint = Paint().apply {
-                                color = Color.WHITE
-                                textSize = 50f
-                                textAlign = Paint.Align.CENTER
+
+                            val borderPaint = Paint().apply {
+                                color = Color.rgb(255, 215, 0)
+                                style = Paint.Style.STROKE
+                                strokeWidth = 3f * s.scale
                             }
-                            val emoji = when (item.type) {
-                                Item.ItemType.WEAPON -> "🗡️"
-                                Item.ItemType.SHIELD -> "🛡️"
-                                Item.ItemType.CONSUMABLE -> "🍰"
-                                else -> "📦"
-                            }
-                            canvas.drawText(emoji, x + slotSize / 2, y + slotSize / 2 + 15f, emojiPaint)
+                            canvas.drawRoundRect(
+                                RectF(x - 2f * s.scale, y - 2f * s.scale,
+                                    x + slotSize + 2f * s.scale, y + slotSize + 2f * s.scale),
+                                14f * s.scale, 14f * s.scale, borderPaint
+                            )
                         }
 
+                        // Иконка предмета
+                        val icon = loadItemIcon(item)
+                        if (icon != null) {
+                            val iconSize = slotSize * 0.6f
+                            val dstRect = RectF(
+                                x + (slotSize - iconSize) / 2,
+                                y + (slotSize - iconSize) / 2 - slotSize * 0.05f,
+                                x + (slotSize + iconSize) / 2,
+                                y + (slotSize + iconSize) / 2 - slotSize * 0.05f
+                            )
+                            drawItemRarity(canvas, x, y, slotSize, slotSize, item.rarity, s)
+                            canvas.drawBitmap(icon, null, dstRect, null)
+                        } else {
+                            // Эмодзи если нет иконки
+                            val emojiPaint = Paint().apply {
+                                color = Color.WHITE
+                                textSize = slotSize * 0.45f
+                                textAlign = Paint.Align.CENTER
+                            }
+                            val emoji = when {
+                                item.id.startsWith("rune_") -> "💎"
+                                item.type == Item.ItemType.WEAPON -> "🗡️"
+                                item.type == Item.ItemType.SHIELD -> "🛡️"
+                                item.type == Item.ItemType.CONSUMABLE -> {
+                                    when {
+                                        item.id.startsWith("cake_") -> "🍰"
+                                        item.id == "oridecon" || item.id == "elunium" -> "⛏️"
+                                        else -> "🍽️"
+                                    }
+                                }
+                                item.type == Item.ItemType.HELMET -> "⛑️"
+                                item.type == Item.ItemType.CHEST -> "👕"
+                                item.type == Item.ItemType.PANTS -> "👖"
+                                item.type == Item.ItemType.BOOTS -> "👢"
+                                item.type == Item.ItemType.GLOVES -> "🧤"
+                                item.type == Item.ItemType.BRACERS -> "💪"
+                                item.type == Item.ItemType.RING -> "💍"
+                                item.type == Item.ItemType.NECKLACE -> "📿"
+                                else -> "📦"
+                            }
+                            canvas.drawText(emoji, x + slotSize / 2, y + slotSize / 2 + slotSize * 0.15f, emojiPaint)
+                        }
+
+                        // ⭐ ОТОБРАЖЕНИЕ КОЛИЧЕСТВА (для стакающихся предметов)
+                        if (item.isStackable() && item.quantity > 1) {
+                            val countPaint = Paint().apply {
+                                color = Color.rgb(255, 215, 0)
+                                textSize = s.fontSizeSmall * 1.5f
+                                textAlign = Paint.Align.RIGHT
+                                typeface = Typeface.DEFAULT_BOLD
+                                isAntiAlias = true
+                            }
+                            val bgCountPaint = Paint().apply {
+                                color = Color.argb(200, 0, 0, 0)
+                                style = Paint.Style.FILL
+                            }
+                            val countText = "×${item.quantity}"
+                            val textWidth = countPaint.measureText(countText)
+                            val countX = x + slotSize - 8f * s.scale
+                            val countY = y + slotSize - 8f * s.scale
+
+                            val bgPadding = 6f * s.scale
+                            canvas.drawRoundRect(
+                                RectF(
+                                    countX - textWidth - bgPadding - 4f * s.scale,
+                                    countY - s.fontSizeMedium * 1.2f,
+                                    countX + bgPadding + 4f * s.scale,
+                                    countY + 6f * s.scale
+                                ),
+                                8f * s.scale, 8f * s.scale, bgCountPaint
+                            )
+                            canvas.drawText(countText, countX, countY, countPaint)
+                        }
+
+                        // Название предмета
                         val textPaint = Paint().apply {
-                            color = when (item.type) {
-                                Item.ItemType.WEAPON -> Color.rgb(255, 200, 100)
-                                Item.ItemType.SHIELD -> Color.rgb(100, 200, 255)
-                                Item.ItemType.HELMET -> Color.rgb(100, 200, 255)
-                                Item.ItemType.CHEST -> Color.rgb(200, 100, 255)
-                                Item.ItemType.CONSUMABLE -> Color.rgb(100, 255, 100)
+                            color = when {
+                                item.id.startsWith("rune_") -> Color.rgb(255, 215, 0)
+                                item.type == Item.ItemType.WEAPON -> Color.rgb(255, 200, 100)
+                                item.type == Item.ItemType.SHIELD -> Color.rgb(100, 200, 255)
+                                item.type == Item.ItemType.HELMET -> Color.rgb(100, 200, 255)
+                                item.type == Item.ItemType.CHEST -> Color.rgb(200, 100, 255)
+                                item.type == Item.ItemType.CONSUMABLE -> {
+                                    when {
+                                        item.id.startsWith("cake_") -> Color.rgb(100, 255, 100)
+                                        item.id == "oridecon" || item.id == "elunium" -> Color.rgb(200, 200, 100)
+                                        else -> Color.rgb(100, 255, 100)
+                                    }
+                                }
+                                item.type == Item.ItemType.RING -> Color.rgb(255, 200, 200)
+                                item.type == Item.ItemType.NECKLACE -> Color.rgb(200, 200, 255)
                                 else -> Color.WHITE
                             }
-                            textSize = 16f
+                            textSize = s.fontSizeTiny
                             textAlign = Paint.Align.CENTER
                             typeface = Typeface.DEFAULT_BOLD
                         }
                         val displayName = if (item.name.length > 8) item.name.take(8) + ".." else item.name
-                        canvas.drawText(displayName, x + slotSize / 2, y + slotSize - 10f, textPaint)
-
-                        if (item.type == Item.ItemType.CONSUMABLE) {
-                            val hintPaint = Paint().apply {
-                                color = Color.argb(150, 100, 255, 100)
-                                textSize = 12f
-                                textAlign = Paint.Align.CENTER
-                            }
-                            canvas.drawText("🍴 Использовать", x + slotSize / 2, y + slotSize - 28f, hintPaint)
+                        if (item.refineLevel > 0) {
+                            canvas.drawText("+${item.refineLevel} $displayName", x + slotSize / 2, y + slotSize - s.fontSizeTiny * 0.6f, textPaint)
+                        } else {
+                            canvas.drawText(displayName, x + slotSize / 2, y + slotSize - s.fontSizeTiny * 0.6f, textPaint)
                         }
 
+                        // Подсказка для расходников
+                        if (item.type == Item.ItemType.CONSUMABLE && !item.id.startsWith("rune_") && !item.id.startsWith("oridecon") && !item.id.startsWith("elunium")) {
+                            val hintPaint = Paint().apply {
+                                color = Color.argb(150, 100, 255, 100)
+                                textSize = s.fontSizeTiny * 0.8f
+                                textAlign = Paint.Align.CENTER
+                            }
+                            canvas.drawText("🍴 Использовать", x + slotSize / 2, y + slotSize - s.fontSizeTiny * 1.1f, hintPaint)
+                        }
+
+                        // ⭐ ПОДСКАЗКА ДЛЯ РУН (в режиме инжекта)
+                        if (isSelectableRune) {
+                            val hintPaint = Paint().apply {
+                                color = Color.argb(200, 255, 215, 0)
+                                textSize = s.fontSizeTiny * 0.8f
+                                textAlign = Paint.Align.CENTER
+                                typeface = Typeface.DEFAULT_BOLD
+                            }
+                            canvas.drawText("👆 Нажмите для вставки", x + slotSize / 2, y + slotSize - s.fontSizeTiny * 1.8f, hintPaint)
+                        }
+
+                        // Рамка ячейки
                         val borderPaint = Paint().apply {
                             color = Color.argb(80, 255, 255, 255)
                             style = Paint.Style.STROKE
-                            strokeWidth = 2f
+                            strokeWidth = 2f * s.scale
                         }
-                        canvas.drawRoundRect(
-                            RectF(x, y, x + slotSize, y + slotSize),
-                            12f, 12f, borderPaint
-                        )
+                        canvas.drawRoundRect(RectF(x, y, x + slotSize, y + slotSize), 12f * s.scale, 12f * s.scale, borderPaint)
                     }
                 }
             }
         }
+    }
+
+    // ⭐ ОТРИСОВКА РАМКИ РЕДКОСТИ
+    private fun drawItemRarity(canvas: Canvas, x: Float, y: Float, width: Float, height: Float, rarity: ItemRarity, s: ScreenSizes) {
+        val color = when (rarity) {
+            ItemRarity.COMMON -> Color.rgb(200, 200, 200)
+            ItemRarity.UNCOMMON -> Color.rgb(50, 200, 50)
+            ItemRarity.RARE -> Color.rgb(50, 150, 255)
+            ItemRarity.EPIC -> Color.rgb(200, 100, 255)
+            ItemRarity.LEGENDARY -> Color.rgb(255, 150, 50)
+            ItemRarity.MYTHIC -> Color.rgb(255, 215, 0)
+        }
+
+        val glowPaint = Paint().apply {
+            this.color = color
+            alpha = 40
+            style = Paint.Style.FILL
+        }
+        canvas.drawRoundRect(
+            RectF(x - 4f * s.scale, y - 4f * s.scale, x + width + 4f * s.scale, y + height + 4f * s.scale),
+            16f * s.scale, 16f * s.scale, glowPaint
+        )
+
+        val borderPaint = Paint().apply {
+            this.color = color
+            style = Paint.Style.STROKE
+            strokeWidth = 3f * s.scale
+        }
+        canvas.drawRoundRect(
+            RectF(x - 2f * s.scale, y - 2f * s.scale, x + width + 2f * s.scale, y + height + 2f * s.scale),
+            14f * s.scale, 14f * s.scale, borderPaint
+        )
     }
 
     // ⭐ ОБРАБОТКА КАСАНИЙ
@@ -1057,20 +1485,26 @@ class InventoryScreen(
         onClose: () -> Unit,
         onDeleteItem: (Int) -> Unit,
         onUseItem: (Int) -> Unit,
-        onRename: (String) -> Unit
+        onRename: (String) -> Unit,
+        onRefineItem: (Int) -> Unit,
+        onShowMessage: (String) -> Unit
     ): Boolean {
-        // ⭐ ЕСЛИ ОТКРЫТ ДИАЛОГ ПЕРЕИМЕНОВАНИЯ
+        // Если размеры не вычислены — вычисляем
+        if (sizes == null) calculateSizes(width, height)
+        val s = getSizes()
+
         if (showRenameDialog) {
-            return handleRenameDialogTouch(x, y, width, height, player, onRename)
+            return handleRenameDialogTouch(x, y, width, height, player, onRename, s)
         }
 
         // Кнопка закрытия
-        val closeX = width - 40f
-        val closeY = 45f
-        val halfSize = 40f
+        val closeX = width - 80f * s.scale
+        val closeY = 70f * s.scale
+        val halfSize = s.closeBtnSize / 2 * 1.5f
+        val clickPadding = 15f * s.scale
 
-        if (x > closeX - halfSize && x < closeX + halfSize &&
-            y > closeY - halfSize && y < closeY + halfSize) {
+        if (x > closeX - halfSize - clickPadding && x < closeX + halfSize + clickPadding &&
+            y > closeY - halfSize - clickPadding && y < closeY + halfSize + clickPadding) {
             if (showDeleteConfirm) {
                 showDeleteConfirm = false
                 deleteItemIndex = -1
@@ -1080,26 +1514,21 @@ class InventoryScreen(
             return true
         }
 
-        // Окно подтверждения удаления
         if (showDeleteConfirm) {
-            val dialogWidth = 600f
-            val dialogHeight = 350f
-            val dialogX = (width - dialogWidth) / 2
-            val dialogY = (height - dialogHeight) / 2
-            val btnWidth = 160f
-            val btnHeight = 60f
-            val btnY = dialogY + 240f
+            val dialogX = (width - s.dialogWidth) / 2
+            val dialogY = (height - s.dialogHeight * 0.5f) / 2
+            val btnY = dialogY + s.dialogHeight * 0.5f - s.btnHeight - 20f * s.scale
 
-            if (x > dialogX + 50f && x < dialogX + 50f + btnWidth &&
-                y > btnY && y < btnY + btnHeight) {
+            if (x > dialogX + 50f * s.scale && x < dialogX + 50f * s.scale + s.btnWidth &&
+                y > btnY && y < btnY + s.btnHeight) {
                 onDeleteItem(deleteItemIndex)
                 showDeleteConfirm = false
                 deleteItemIndex = -1
                 return true
             }
 
-            if (x > dialogX + dialogWidth - btnWidth - 50f && x < dialogX + dialogWidth - 50f &&
-                y > btnY && y < btnY + btnHeight) {
+            if (x > dialogX + s.dialogWidth - s.btnWidth - 50f * s.scale && x < dialogX + s.dialogWidth - 50f * s.scale &&
+                y > btnY && y < btnY + s.btnHeight) {
                 showDeleteConfirm = false
                 deleteItemIndex = -1
                 return true
@@ -1116,24 +1545,78 @@ class InventoryScreen(
                 renameError = ""
                 isNameInputActive = true
             } else {
-                // Можно показать сообщение через колбэк
-                // Для простоты просто вернём true
+                onShowMessage("❌ Недостаточно золота! Нужно 500 💰")
             }
             return true
         }
 
+        // ⭐ КНОПКА ЗАТОЧКИ
+        if (inventory.selectedSlot >= 0) {
+            val infoX = 25f * s.scale
+            val infoY = height * 0.20f
+            val infoW = s.infoWidth
+            val infoH = s.infoHeight
+
+            val refineBtnSize = 140f * s.scale
+            val refineBtnX = infoX + infoW - 150f * s.scale
+            val refineBtnY = infoY + infoH - 90f * s.scale
+
+            val clickPadding = 20f * s.scale
+            if (x > refineBtnX - clickPadding && x < refineBtnX + refineBtnSize + clickPadding &&
+                y > refineBtnY - clickPadding && y < refineBtnY + refineBtnSize + clickPadding) {
+                val items = inventory.getItems()
+                if (inventory.selectedSlot < items.size) {
+                    val item = items[inventory.selectedSlot]
+                    if (item != null && item.isRefinable() && item.refineLevel < 10) {
+                        onRefineItem(inventory.selectedSlot)
+                        return true
+                    }
+                }
+            }
+        }
+
+        // ⭐ КНОПКА "ИНЖЕКТ" (вставка руны)
+        if (inventory.selectedSlot >= 0) {
+            val infoX = 25f * s.scale
+            val infoY = height * 0.20f
+            val infoW = s.infoWidth
+            val infoH = s.infoHeight
+
+            val injectBtnSize = 140f * s.scale
+            val injectBtnX = infoX + infoW - 320f * s.scale
+            val injectBtnY = infoY + infoH - 90f * s.scale
+
+            val clickPadding = 20f * s.scale
+            if (x > injectBtnX - clickPadding && x < injectBtnX + injectBtnSize + clickPadding &&
+                y > injectBtnY - clickPadding && y < injectBtnY + injectBtnSize + clickPadding) {
+                val items = inventory.getItems()
+                if (inventory.selectedSlot < items.size) {
+                    val item = items[inventory.selectedSlot]
+                    if (item != null && item.getMaxRuneSlots() > 0 && item.runes.size < item.getMaxRuneSlots()) {
+                        isRuneInjectionMode = true
+                        targetItemIndex = inventory.selectedSlot
+                        onShowMessage("💎 Выберите руну для вставки в ${item.name}")
+                        return true
+                    } else {
+                        onShowMessage("❌ В этот предмет нельзя вставить руну (нет свободных слотов)")
+                    }
+                }
+            }
+        }
+
         // Кнопка удаления в информации о предмете
         if (inventory.selectedSlot >= 0) {
-            val infoX = 25f
+            val infoX = 25f * s.scale
             val infoY = height * 0.45f
-            val deleteBtnX = infoX + 440f
-            val deleteBtnY = infoY + 20f
-            val deleteBtnSize = 90f
+            val infoW = s.infoWidth
+            val deleteBtnX = infoX + infoW - 60f * s.scale
+            val deleteBtnY = infoY + 20f * s.scale
+            val deleteSize = 80f * s.scale
 
-            if (x > deleteBtnX - deleteBtnSize / 2 - 8f &&
-                x < deleteBtnX + deleteBtnSize / 2 + 8f &&
-                y > deleteBtnY - deleteBtnSize / 2 - 8f &&
-                y < deleteBtnY + deleteBtnSize / 2 + 8f) {
+            if (x > deleteBtnX - deleteSize / 2 - 6f * s.scale &&
+                x < deleteBtnX + deleteSize / 2 + 6f * s.scale &&
+                y > deleteBtnY - deleteSize / 2 - 6f * s.scale &&
+                y < deleteBtnY + deleteSize / 2 + 6f * s.scale) {
                 val items = inventory.getItems()
                 if (inventory.selectedSlot < items.size) {
                     val item = items[inventory.selectedSlot]
@@ -1147,15 +1630,16 @@ class InventoryScreen(
             }
         }
 
-        // Клик по слоту экипировки
-        if (checkEquipmentSlotClick(x, y, width, height, inventory, onUnequip)) {
+        if (checkEquipmentSlotClick(x, y, width, height, inventory, onUnequip, s)) {
             return true
         }
 
         // Клик по ячейке инвентаря
-        val startY = height * 0.58f
-        val cols = 5
-        val rows = 4
+        val startY = s.gridStartY
+        val cols = s.gridCols
+        val rows = s.gridRows
+        val slotSize = s.gridSlotSize
+        val padding = s.gridPadding
         val totalWidth = cols * (slotSize + padding) - padding
         val startX = (width - totalWidth) / 2
 
@@ -1167,6 +1651,35 @@ class InventoryScreen(
 
                 if (x > cellX && x < cellX + slotSize &&
                     y > cellY && y < cellY + slotSize) {
+
+                    // ⭐ ЕСЛИ В РЕЖИМЕ ИНЖЕКТА
+                    if (isRuneInjectionMode) {
+                        val items = inventory.getItems()
+                        if (index < items.size) {
+                            val item = items[index]
+                            if (item != null && item.id.startsWith("rune_")) {
+                                // Пробуем вставить руну
+                                val success = insertRuneIntoItem(inventory, targetItemIndex, index)
+                                if (success) {
+                                    onShowMessage("✅ Руна ${item.name} вставлена!")
+                                    isRuneInjectionMode = false
+                                    targetItemIndex = -1
+                                    return true
+                                } else {
+                                    onShowMessage("❌ Нельзя вставить эту руну!")
+                                    isRuneInjectionMode = false
+                                    targetItemIndex = -1
+                                    return true
+                                }
+                            }
+                        }
+                        // Если кликнули не по руне — выходим из режима
+                        isRuneInjectionMode = false
+                        targetItemIndex = -1
+                        return true
+                    }
+
+                    // Обычный клик
                     val currentTime = System.currentTimeMillis()
 
                     if (currentTime - lastClickTime < DOUBLE_CLICK_DELAY && lastClickSlot == index) {
@@ -1203,39 +1716,22 @@ class InventoryScreen(
         width: Float,
         height: Float,
         player: Player,
-        onRename: (String) -> Unit
+        onRename: (String) -> Unit,
+        s: ScreenSizes
     ): Boolean {
-        val dialogWidth = 640f
-        val dialogHeight = 720f
-        val dialogX = (width - dialogWidth) / 2
-        val dialogY = (height - dialogHeight) / 2
+        val dialogX = (width - s.dialogWidth) / 2
+        val dialogY = (height - s.dialogHeight) / 2
 
-        // Поле ввода
-        val inputX = dialogX + 50f
-        val inputY = dialogY + 170f
-        val inputWidth = dialogWidth - 100f
-        val inputHeight = 50f
+        val inputY = dialogY + 170f * s.scale
+        val inputHeight = 50f * s.scale
 
-        // Клавиатура
-        val keyboardStartY = inputY + inputHeight + 80f
+        val keyboardStartY = inputY + inputHeight + 80f * s.scale
+        val keyboardHeight = 3 * (s.keyboardKeyHeight + s.keyboardSpacing) + 30f * s.scale
 
-        // Размеры клавиш
-        val keyWidth = 70f
-        val keyHeight = 70f
-        val keySpacing = 8f
+        val btnY = keyboardStartY + keyboardHeight + 20f * s.scale
 
-        // Высота клавиатуры
-        val keyboardHeight = 3 * (keyHeight + keySpacing) + 30f
-
-        // ⭐ КНОПКИ ДЕЙСТВИЙ
-        val btnWidth = 155f
-        val btnHeight = 50f
-        val btnSpacing = 20f
-        val btnY = keyboardStartY + keyboardHeight + btnSpacing
-
-        // Кнопка "Принять"
-        if (x > dialogX + 50f && x < dialogX + 50f + btnWidth &&
-            y > btnY && y < btnY + btnHeight) {
+        if (x > dialogX + 50f * s.scale && x < dialogX + 50f * s.scale + s.btnWidth &&
+            y > btnY && y < btnY + s.btnHeight) {
             if (newNameInput.isNotEmpty() && newNameInput.length >= 2 && player.gold >= 500) {
                 onRename(newNameInput)
                 showRenameDialog = false
@@ -1250,9 +1746,8 @@ class InventoryScreen(
             return true
         }
 
-        // Кнопка "Отмена"
-        if (x > dialogX + dialogWidth - btnWidth - 50f && x < dialogX + dialogWidth - 50f &&
-            y > btnY && y < btnY + btnHeight) {
+        if (x > dialogX + s.dialogWidth - s.btnWidth - 50f * s.scale && x < dialogX + s.dialogWidth - 50f * s.scale &&
+            y > btnY && y < btnY + s.btnHeight) {
             showRenameDialog = false
             newNameInput = ""
             renameError = ""
@@ -1260,23 +1755,21 @@ class InventoryScreen(
             return true
         }
 
-        // ⭐ КЛАВИАТУРА — ОБЪЯВЛЯЕМ rows ЗДЕСЬ
-        val rows = listOf(
-            "ЙЦУКЕНГШЩЗХЪ",
-            "ФЫВАПРОЛДЖЭ",
-            "ЯЧСМИТЬБЮ"
-        )
+        // ⭐ КЛАВИАТУРА
+        val rows = listOf("ЙЦУКЕНГШЩЗХЪ", "ФЫВАПРОЛДЖЭ", "ЯЧСМИТЬБЮ")
+        val keyWidth = s.keyboardKeyWidth
+        val keyHeight = s.keyboardKeyHeight
+        val keySpacing = s.keyboardSpacing
 
         for ((rowIndex, row) in rows.withIndex()) {
-            val yPos = keyboardStartY + rowIndex * (keyHeight + keySpacing) + 20f
-            val rowWidth = row.length * (keyWidth + keySpacing) - keySpacing  // ← теперь row.length доступен
-            val rowOffsetX = (dialogWidth - rowWidth) / 2
+            val yPos = keyboardStartY + rowIndex * (keyHeight + keySpacing) + 15f * s.scale
+            val rowWidth = row.length * (keyWidth + keySpacing) - keySpacing
+            val rowOffsetX = (s.dialogWidth - rowWidth) / 2
             val xPos = dialogX + rowOffsetX
 
             for ((charIndex, char) in row.withIndex()) {
                 val keyXPos = xPos + charIndex * (keyWidth + keySpacing)
 
-                // Backspace
                 if (rowIndex == 0 && charIndex == row.length - 1) {
                     val backspaceRect = RectF(keyXPos, yPos, keyXPos + keyWidth, yPos + keyHeight)
                     if (x > backspaceRect.left && x < backspaceRect.right &&
@@ -1290,7 +1783,6 @@ class InventoryScreen(
                     continue
                 }
 
-                // Пробел
                 if (rowIndex == 2 && charIndex == row.length - 1) {
                     val spaceWidth = keyWidth * 3 + keySpacing * 2
                     val spaceRect = RectF(keyXPos, yPos, keyXPos + spaceWidth, yPos + keyHeight)
@@ -1305,7 +1797,6 @@ class InventoryScreen(
                     break
                 }
 
-                // Обычная клавиша
                 val keyRect = RectF(keyXPos, yPos, keyXPos + keyWidth, yPos + keyHeight)
                 if (x > keyRect.left && x < keyRect.right &&
                     y > keyRect.top && y < keyRect.bottom) {
@@ -1318,8 +1809,7 @@ class InventoryScreen(
             }
         }
 
-        // Клик вне диалога
-        if (x < dialogX || x > dialogX + dialogWidth || y < dialogY || y > dialogY + dialogHeight) {
+        if (x < dialogX || x > dialogX + s.dialogWidth || y < dialogY || y > dialogY + s.dialogHeight) {
             showRenameDialog = false
             newNameInput = ""
             renameError = ""
@@ -1337,22 +1827,27 @@ class InventoryScreen(
         width: Float,
         height: Float,
         inventory: Inventory,
-        onUnequip: (EquipmentSlot) -> Unit
+        onUnequip: (EquipmentSlot) -> Unit,
+        s: ScreenSizes
     ): Boolean {
         val centerX = width / 2
         val centerY = height * 0.30f
-        val radius = 400f
+        val radius = s.equipmentRadius
+        val slotSize = s.equipmentSlotSize
 
+        // ⭐ ДОБАВЛЯЕМ КОЛЬЦА
         val slots = listOf(
             EquipmentSlot.HELMET to -90f,
             EquipmentSlot.WEAPON to -150f,
             EquipmentSlot.SHIELD to -30f,
             EquipmentSlot.CHEST to 0f,
-            EquipmentSlot.GLOVES to 60f,
+            EquipmentSlot.GLOVES to 240f,
             EquipmentSlot.BRACERS to 120f,
             EquipmentSlot.PANTS to 180f,
-            EquipmentSlot.BOOTS to 240f,
-            EquipmentSlot.NECKLACE to 300f
+            EquipmentSlot.BOOTS to 60f,
+            EquipmentSlot.NECKLACE to 300f,
+            EquipmentSlot.RING1 to -210f,
+            EquipmentSlot.RING2 to -270f
         )
 
         for ((slot, angleDeg) in slots) {
@@ -1360,8 +1855,8 @@ class InventoryScreen(
             val slotX = centerX + (radius * cos(angleRad)).toFloat()
             val slotY = centerY + (radius * sin(angleRad)).toFloat()
 
-            if (x > slotX - 70f && x < slotX + 70f &&
-                y > slotY - 70f && y < slotY + 70f) {
+            if (x > slotX - slotSize / 2 && x < slotX + slotSize / 2 &&
+                y > slotY - slotSize / 2 && y < slotY + slotSize / 2) {
                 if (inventory.isSlotEquipped(slot)) {
                     val currentTime = System.currentTimeMillis()
                     if (currentTime - lastClickTime < DOUBLE_CLICK_DELAY && lastClickSlot == -2) {
@@ -1383,71 +1878,55 @@ class InventoryScreen(
     private fun loadItemIcon(item: Item): Bitmap? {
         return when (item.id) {
             // Мечи
-            "sword_rusty" -> loadIcon("sword_rusty")
-            "sword_iron" -> loadIcon("sword_iron")
-            "sword_steel" -> loadIcon("sword_steel")
-            "sword_flame" -> loadIcon("sword_flame")
-            "sword_venom" -> loadIcon("sword_venom")
-            "sword_arachnid" -> loadIcon("sword_arachnid")
-            "sword_venomous" -> loadIcon("sword_venomous")
-            "sword_moonlight" -> loadIcon("sword_moonlight")
-            "sword_legendary" -> loadIcon("sword_legendary")
-            "sword_mythic" -> loadIcon("sword_mythic")
-            "dagger_bone" -> loadIcon("dagger_bone")
+            "sword_rusty", "sword_iron", "sword_steel", "sword_flame",
+            "sword_venom", "sword_arachnid", "sword_venomous", "sword_moonlight",
+            "sword_legendary", "sword_mythic", "dagger_bone" -> loadIcon(item.id)
             // Топоры
-            "axe_wooden" -> loadIcon("axe_wooden")
-            "axe_iron" -> loadIcon("axe_iron")
-            "axe_battle" -> loadIcon("axe_battle")
+            "axe_wooden", "axe_iron", "axe_battle" -> loadIcon(item.id)
             // Щит
             "crusader_shield" -> loadIcon("crusader_shield")
+            "shield_1" -> loadIcon("shield_1")
+            "shield_2" -> loadIcon("shield_2")
+            "shield_3" -> loadIcon("shield_3")
             // Торты
-            "cake_small" -> loadIcon("cake_small")
-            "cake_medium" -> loadIcon("cake_medium")
-            "cake_large" -> loadIcon("cake_large")
+            "cake_small", "cake_medium", "cake_large" -> loadIcon(item.id)
             // Шлемы
-            "helmet_1" -> loadItemIconFromSprite("armor_items", "helmet_1")
-            "helmet_2" -> loadItemIconFromSprite("armor_items", "helmet_2")
-            "helmet_3" -> loadItemIconFromSprite("armor_items", "helmet_3")
-            "helmet_4" -> loadItemIconFromSprite("armor_items", "helmet_4")
-            "helmet_5" -> loadItemIconFromSprite("armor_items", "helmet_5")
+            "helmet_1", "helmet_2", "helmet_3", "helmet_4", "helmet_5" ->
+                loadItemIconFromSprite("armor_items", item.id)
             // Броня
-            "chest_1" -> loadItemIconFromSprite("armor_items", "chest_1")
-            "chest_2" -> loadItemIconFromSprite("armor_items", "chest_2")
-            "chest_3" -> loadItemIconFromSprite("armor_items", "chest_3")
-            "chest_4" -> loadItemIconFromSprite("armor_items", "chest_4")
-            "chest_5" -> loadItemIconFromSprite("armor_items", "chest_5")
+            "chest_1", "chest_2", "chest_3", "chest_4", "chest_5" ->
+                loadItemIconFromSprite("armor_items", item.id)
             // Перчатки
-            "gloves_1" -> loadItemIconFromSprite("armor_items", "gloves_1")
-            "gloves_2" -> loadItemIconFromSprite("armor_items", "gloves_2")
-            "gloves_3" -> loadItemIconFromSprite("armor_items", "gloves_3")
-            "gloves_4" -> loadItemIconFromSprite("armor_items", "gloves_4")
-            "gloves_5" -> loadItemIconFromSprite("armor_items", "gloves_5")
+            "gloves_1", "gloves_2", "gloves_3", "gloves_4", "gloves_5" ->
+                loadItemIconFromSprite("armor_items", item.id)
             // Поножи
-            "pants_1" -> loadItemIconFromSprite("armor_items", "pants_1")
-            "pants_2" -> loadItemIconFromSprite("armor_items", "pants_2")
-            "pants_3" -> loadItemIconFromSprite("armor_items", "pants_3")
-            "pants_4" -> loadItemIconFromSprite("armor_items", "pants_4")
-            "pants_5" -> loadItemIconFromSprite("armor_items", "pants_5")
+            "pants_1", "pants_2", "pants_3", "pants_4", "pants_5" ->
+                loadItemIconFromSprite("armor_items", item.id)
             // Ботинки
-            "boots_1" -> loadItemIconFromSprite("armor_items", "boots_1")
-            "boots_2" -> loadItemIconFromSprite("armor_items", "boots_2")
-            "boots_3" -> loadItemIconFromSprite("armor_items", "boots_3")
-            "boots_4" -> loadItemIconFromSprite("armor_items", "boots_4")
-            "boots_5" -> loadItemIconFromSprite("armor_items", "boots_5")
+            "boots_1", "boots_2", "boots_3", "boots_4", "boots_5" ->
+                loadItemIconFromSprite("armor_items", item.id)
+            // кольца
+            "ring_1" -> loadIcon("ring_1")
+            // ожерелья
+            "necklace_1" -> loadIcon("necklace_1")
+            "necklace_2" -> loadIcon("necklace_2")
+            "necklace_3" -> loadIcon("necklace_3")
+
+            // ⭐ МАТЕРИАЛЫ ДЛЯ ЗАТОЧКИ
+            "oridecon" -> loadIcon("oridecon")
+            "elunium" -> loadIcon("elunium")
+
+            // ⭐ РУНЫ
+            "rune_strength" -> loadIcon("rune_1")
+
             else -> null
         }
     }
 
     private fun loadIcon(name: String): Bitmap? {
         return try {
-            val resId = context.resources.getIdentifier(
-                name, "drawable", context.packageName
-            )
-            if (resId != 0) {
-                BitmapFactory.decodeResource(context.resources, resId)
-            } else {
-                null
-            }
+            val resId = context.resources.getIdentifier(name, "drawable", context.packageName)
+            if (resId != 0) BitmapFactory.decodeResource(context.resources, resId) else null
         } catch (e: Exception) {
             null
         }
@@ -1457,50 +1936,10 @@ class InventoryScreen(
         return try {
             val spriteSheet = spriteManager.getSpriteSheet(sheetName) ?: return null
             val frameRect = spriteManager.getFrame(sheetName, frameName) ?: return null
-
-            Bitmap.createBitmap(
-                spriteSheet,
-                frameRect.left,
-                frameRect.top,
-                frameRect.width(),
-                frameRect.height()
-            )
+            Bitmap.createBitmap(spriteSheet, frameRect.left, frameRect.top, frameRect.width(), frameRect.height())
         } catch (e: Exception) {
-            println("❌ Ошибка загрузки иконки $frameName: ${e.message}")
             null
         }
-    }
-
-    // ⭐ ОТРИСОВКА РАМКИ РЕДКОСТИ
-    private fun drawItemRarity(canvas: Canvas, x: Float, y: Float, width: Float, height: Float, rarity: ItemRarity) {
-        var color = when (rarity) {
-            ItemRarity.COMMON -> Color.rgb(200, 200, 200)
-            ItemRarity.UNCOMMON -> Color.rgb(50, 200, 50)
-            ItemRarity.RARE -> Color.rgb(50, 150, 255)
-            ItemRarity.EPIC -> Color.rgb(200, 100, 255)
-            ItemRarity.LEGENDARY -> Color.rgb(255, 150, 50)
-            ItemRarity.MYTHIC -> Color.rgb(255, 215, 0)
-        }
-
-        val glowPaint = Paint().apply {
-            color = color
-            alpha = 40
-            style = Paint.Style.FILL
-        }
-        canvas.drawRoundRect(
-            RectF(x - 4f, y - 4f, x + width + 4f, y + height + 4f),
-            16f, 16f, glowPaint
-        )
-
-        val borderPaint = Paint().apply {
-            color = color
-            style = Paint.Style.STROKE
-            strokeWidth = 3f
-        }
-        canvas.drawRoundRect(
-            RectF(x - 2f, y - 2f, x + width + 2f, y + height + 2f),
-            14f, 14f, borderPaint
-        )
     }
 
     private fun getSlotIcon(slot: EquipmentSlot): String = when (slot) {
@@ -1513,7 +1952,39 @@ class InventoryScreen(
         EquipmentSlot.GLOVES -> "🧤"
         EquipmentSlot.BRACERS -> "💪"
         EquipmentSlot.NECKLACE -> "📿"
-        EquipmentSlot.RING1 -> "💍"
-        EquipmentSlot.RING2 -> "💍"
+        EquipmentSlot.RING1, EquipmentSlot.RING2 -> "💍"
+    }
+
+    // ⭐ МЕТОД ВСТАВКИ РУНЫ В ПРЕДМЕТ
+    private fun insertRuneIntoItem(inventory: Inventory, itemIndex: Int, runeIndex: Int): Boolean {
+        val items = inventory.getItems()
+        if (itemIndex >= items.size || runeIndex >= items.size) return false
+
+        val targetItem = items[itemIndex] ?: return false
+        val runeItem = items[runeIndex] ?: return false
+
+        // Проверяем, что это руна
+        if (!runeItem.id.startsWith("rune_")) return false
+
+        // Проверяем, что предмет может принять руну
+        if (!targetItem.canAddRune()) return false
+
+        // Создаём руну из предмета
+        val rune = Rune(
+            id = runeItem.id,
+            name = runeItem.name,
+            description = runeItem.description,
+            stats = runeItem.stats,
+            rarity = runeItem.rarity
+        )
+
+        // Добавляем руну в предмет
+        if (targetItem.addRune(rune)) {
+            // Удаляем руну из инвентаря
+            inventory.removeItem(runeIndex)
+            return true
+        }
+
+        return false
     }
 }

@@ -19,7 +19,9 @@ data class DropTable(
         val maxCount: Int = 1,
         val rarity: ItemRarity,
         val stats: ItemStats = ItemStats(),
-        val description: String = ""
+        val description: String = "",
+        val quantity: Int = 1,
+        val runeStats: ItemStats = ItemStats()
     )
 
     /**
@@ -33,16 +35,31 @@ data class DropTable(
             if (random.nextDouble() * 100 < entry.chance) {
                 val count = random.nextInt(entry.minCount, entry.maxCount + 1)
                 for (i in 0 until count) {
-                    result.add(
-                        Item(
-                            id = entry.itemId + if (count > 1) "_${i}" else "",
-                            name = entry.itemName + if (count > 1) " x${i+1}" else "",
-                            type = entry.itemType,
-                            icon = null,
-                            description = entry.description,
-                            stats = entry.stats
+                    if (entry.itemId.startsWith("rune_")) {
+                        result.add(
+                            Item(
+                                id = entry.itemId,
+                                name = entry.itemName,
+                                type = entry.itemType,
+                                rarity = entry.rarity,
+                                description = entry.description,
+                                stats = entry.runeStats,
+                                quantity = 1
+                            )
                         )
-                    )
+                    } else {
+                        result.add(
+                            Item(
+                                id = entry.itemId + if (count > 1) "_${i}" else "",
+                                name = entry.itemName + if (count > 1) " x${i+1}" else "",
+                                type = entry.itemType,
+                                rarity = entry.rarity,
+                                description = entry.description,
+                                stats = entry.stats,
+                                quantity = entry.quantity
+                            )
+                        )
+                    }
                 }
             }
         }

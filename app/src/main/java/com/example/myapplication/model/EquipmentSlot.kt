@@ -11,7 +11,7 @@ enum class EquipmentSlot {
     BRACERS,     // Наручи
     NECKLACE,    // Амулет
     RING1,       // Кольцо 1
-    RING2        // Кольцо 2
+    RING2
 }
 
 fun getSlotDisplayName(slot: EquipmentSlot): String = when (slot) {

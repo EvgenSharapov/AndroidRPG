@@ -13,7 +13,9 @@ data class Mob(
     var respawnTimer: Int = 0,  // ← ТАЙМЕР РЕСПАУНА
     var startX: Float = x,      // ← НАЧАЛЬНАЯ ПОЗИЦИЯ (для респауна)
     var startY: Float = y,     // ← НАЧАЛЬНАЯ ПОЗИЦИЯ (для респауна)
-    var isBoss: Boolean = false
+    var isBoss: Boolean = false,
+    var attack: Int = 5,      // ← ДОБАВЛЯЕМ БАЗОВУЮ АТАКУ
+    var defense: Int = 0      // ← ДОБАВЛЯЕМ БАЗОВУЮ ЗАЩИТУ
 ) {
     fun getTypeName(): String = when (type) {
         0 -> if (isBoss) "👑 Флаффи-босс" else "Флаффи"
