@@ -1,0 +1,111 @@
+{
+  "meta": {
+    "image": "runes",
+    "size": {
+      "w": 740,
+      "h": 740
+    }
+  },
+  "frames": {
+    "rune_strength": {
+      "frame": { "x": 40, "y": 50, "w": 132, "h": 180 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "rune_defense": {
+      "frame": { "x": 172, "y": 50, "w": 132, "h": 180 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "rune_health": {
+      "frame": { "x": 304, "y": 50, "w": 132, "h": 180 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "rune_regen": {
+      "frame": { "x": 436, "y": 50, "w": 132, "h": 180 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "rune_crit": {
+      "frame": { "x": 568, "y": 50, "w": 132, "h": 180 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "rune_crit_damage": {
+      "frame": { "x": 40, "y": 230, "w": 132, "h": 150 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "rune_gold": {
+      "frame": { "x": 172, "y": 230, "w": 132, "h": 150 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "rune_exp": {
+      "frame": { "x": 304, "y": 230, "w": 132, "h": 150 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "rune_dodge": {
+      "frame": { "x": 436, "y": 230, "w": 132, "h": 150 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "rune_speed": {
+      "frame": { "x": 568, "y": 230, "w": 132, "h": 150 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "rune_fury": {
+      "frame": { "x": 40, "y": 380, "w": 132, "h": 160 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "rune_spider": {
+      "frame": { "x": 172, "y": 380, "w": 132, "h": 160 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "rune_wisdom": {
+      "frame": { "x": 304, "y": 380, "w": 132, "h": 160 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "rune_knight": {
+      "frame": { "x": 436, "y": 380, "w": 132, "h": 160 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "rune_endurance": {
+      "frame": { "x": 568, "y": 380, "w": 132, "h": 160 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "rune_steel": {
+      "frame": { "x": 40, "y": 540, "w": 132, "h": 150 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "rune_greed": {
+      "frame": { "x": 172, "y": 540, "w": 132, "h": 150 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "rune_enlightenment": {
+      "frame": { "x": 304, "y": 540, "w": 132, "h": 150 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "rune_ork_fury": {
+      "frame": { "x": 436, "y": 540, "w": 132, "h": 150 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "rune_troll": {
+      "frame": { "x": 568, "y": 540, "w": 132, "h": 150 },
+      "rotated": false,
+      "trimmed": false
+    }
+  }
+}

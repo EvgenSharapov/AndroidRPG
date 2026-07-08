@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.*
 import com.example.myapplication.GameView
 import com.example.myapplication.SpriteManager
+import com.example.myapplication.manager.RuneManager
 import com.example.myapplication.model.*
 import kotlin.math.cos
 import kotlin.math.sin
@@ -12,6 +13,9 @@ class InventoryScreen(
     private val context: Context,
     private val spriteManager: SpriteManager
 ) {
+
+    private var runeManager: RuneManager = RuneManager(context)
+
 
     // ⭐ ВКЛАДКИ ИНВЕНТАРЯ
     enum class InventoryTab {
@@ -532,16 +536,44 @@ class InventoryScreen(
                 currentY += 45f * s.scale
             }
 
-            // Для рун
+            // Для рун показываем их эффект
             if (item.id.startsWith("rune_")) {
-                val runePaint = Paint().apply {
-                    color = Color.rgb(255, 215, 0)
+                val effectPaint = Paint().apply {
+                    color = item.getRuneColor()
                     textSize = s.fontSizeMedium * 1.6f
                     textAlign = Paint.Align.LEFT
                     typeface = Typeface.DEFAULT_BOLD
                 }
-                canvas.drawText("💎 Можно вставить в предмет с слотами", infoX + 25f * s.scale, currentY, runePaint)
-                currentY += 42f * s.scale
+
+                val effectText = when (item.id) {
+                    // Обычные руны
+                    "rune_strength" -> "💪 +3 к атаке"
+                    "rune_defense" -> "🛡️ +3 к защите"
+                    "rune_health" -> "❤️ +15 к HP"
+                    "rune_regen" -> "🔄 +2 HP/сек регенерации"
+                    "rune_crit" -> "💥 +5% шанс крита"
+                    "rune_crit_damage" -> "⚡ +10% крит. урона"
+                    "rune_gold" -> "💰 +5% золота с мобов"
+                    "rune_exp" -> "⭐ +5% опыта"
+                    "rune_dodge" -> "💨 +5% уворота"
+                    "rune_speed" -> "🏃 +10% скорости"
+
+                    // БОСС-РУНЫ
+                    "rune_fury" -> "💢 +10 к атаке"
+                    "rune_spider" -> "🕷️ +10 к защите"
+                    "rune_wisdom" -> "🧠 +5% крита, +10% крит. урона"
+                    "rune_knight" -> "🗡️ +8 защиты, +20 HP"
+                    "rune_endurance" -> "💚 +30 HP, +3 HP/сек"
+                    "rune_steel" -> "⛓️ +12 защиты"
+                    "rune_greed" -> "💰 +15% золота"
+                    "rune_enlightenment" -> "✨ +15% опыта"
+                    "rune_ork_fury" -> "🗡️💥 +15 атаки, +5% крита"
+                    "rune_troll" -> "🧌 +40 HP, +5 HP/сек, +5% крит. урона"
+                    else -> ""
+                }
+
+                canvas.drawText("✨ $effectText", infoX + 25f * s.scale, currentY, effectPaint)
+                currentY += 50f * s.scale
             }
         }
 
@@ -633,34 +665,37 @@ class InventoryScreen(
 
         // --- ⭐ КНОПКИ (УВЕЛИЧЕНЫ В 2 РАЗА) ---
 
-        // КНОПКА УДАЛЕНИЯ (справа сверху)
-        val deleteBtnX = infoX + infoW - 75f * s.scale
-        val deleteBtnY = infoY + 30f * s.scale
-        val deleteSize = 100f * s.scale
+        // ⭐ КНОПКА УДАЛЕНИЯ (СВЕРХУ СПРАВА)
+        val deleteBtnSize = 100f * s.scale
+        val deleteBtnX = infoX + infoW - deleteBtnSize - 20f * s.scale
+        val deleteBtnY = infoY + 20f * s.scale
 
+        // Фон кнопки удаления (красный круг)
         val deleteBgPaint = Paint().apply {
-            color = Color.rgb(180, 50, 50)
+            color = Color.rgb(200, 50, 50)
             style = Paint.Style.FILL
         }
-        canvas.drawCircle(deleteBtnX, deleteBtnY, deleteSize / 2 + 8f * s.scale, deleteBgPaint)
+        canvas.drawCircle(deleteBtnX + deleteBtnSize / 2, deleteBtnY + deleteBtnSize / 2, deleteBtnSize / 2, deleteBgPaint)
 
-        val deleteCross = Paint().apply {
-            color = Color.WHITE
-            strokeWidth = 8f * s.scale
-            style = Paint.Style.STROKE
-            strokeCap = Paint.Cap.ROUND
+        // Свечение
+        val deleteGlowPaint = Paint().apply {
+            shader = RadialGradient(
+                deleteBtnX + deleteBtnSize / 2, deleteBtnY + deleteBtnSize / 2, deleteBtnSize,
+                Color.argb(60, 255, 100, 100),
+                Color.TRANSPARENT,
+                Shader.TileMode.CLAMP
+            )
         }
-        val crossSize = deleteSize * 0.3f
-        canvas.drawLine(deleteBtnX - crossSize, deleteBtnY - crossSize, deleteBtnX + crossSize, deleteBtnY + crossSize, deleteCross)
-        canvas.drawLine(deleteBtnX + crossSize, deleteBtnY - crossSize, deleteBtnX - crossSize, deleteBtnY + crossSize, deleteCross)
+        canvas.drawCircle(deleteBtnX + deleteBtnSize / 2, deleteBtnY + deleteBtnSize / 2, deleteBtnSize, deleteGlowPaint)
 
-        val deleteHint = Paint().apply {
-            color = Color.argb(200, 255, 150, 150)
-            textSize = s.fontSizeMedium * 1.2f
+        // Иконка корзины
+        val deleteIconPaint = Paint().apply {
+            color = Color.WHITE
+            textSize = deleteBtnSize * 0.5f
             textAlign = Paint.Align.CENTER
             typeface = Typeface.DEFAULT_BOLD
         }
-        canvas.drawText("🗑️", deleteBtnX, deleteBtnY + deleteSize * 0.45f + 10f * s.scale, deleteHint)
+        canvas.drawText("🗑️", deleteBtnX + deleteBtnSize / 2, deleteBtnY + deleteBtnSize / 2 + deleteBtnSize * 0.2f, deleteIconPaint)
 
         // ⭐ КНОПКА "ИНЖЕКТ" (слева, увеличена в 2 раза)
         val injectBtnSize = 140f * s.scale
@@ -1472,7 +1507,7 @@ class InventoryScreen(
         )
     }
 
-    // ⭐ ОБРАБОТКА КАСАНИЙ
+    // ui/InventoryScreen.kt - исправленный handleTouch
     fun handleTouch(
         x: Float,
         y: Float,
@@ -1489,7 +1524,6 @@ class InventoryScreen(
         onRefineItem: (Int) -> Unit,
         onShowMessage: (String) -> Unit
     ): Boolean {
-        // Если размеры не вычислены — вычисляем
         if (sizes == null) calculateSizes(width, height)
         val s = getSizes()
 
@@ -1550,6 +1584,11 @@ class InventoryScreen(
             return true
         }
 
+        // ⭐ ПРОВЕРКА КЛИКА ПО СЛОТАМ ЭКИПИРОВКИ (ДОБАВЛЯЕМ!)
+        if (checkEquipmentSlotClick(x, y, width, height, inventory, onUnequip, s)) {
+            return true
+        }
+
         // ⭐ КНОПКА ЗАТОЧКИ
         if (inventory.selectedSlot >= 0) {
             val infoX = 25f * s.scale
@@ -1604,19 +1643,20 @@ class InventoryScreen(
             }
         }
 
-        // Кнопка удаления в информации о предмете
+        // ⭐ КНОПКА УДАЛЕНИЯ (СВЕРХУ СПРАВА В ИНФОРМАЦИИ О ПРЕДМЕТЕ)
         if (inventory.selectedSlot >= 0) {
             val infoX = 25f * s.scale
-            val infoY = height * 0.45f
+            val infoY = height * 0.20f
             val infoW = s.infoWidth
-            val deleteBtnX = infoX + infoW - 60f * s.scale
-            val deleteBtnY = infoY + 20f * s.scale
-            val deleteSize = 80f * s.scale
+            val infoH = s.infoHeight
 
-            if (x > deleteBtnX - deleteSize / 2 - 6f * s.scale &&
-                x < deleteBtnX + deleteSize / 2 + 6f * s.scale &&
-                y > deleteBtnY - deleteSize / 2 - 6f * s.scale &&
-                y < deleteBtnY + deleteSize / 2 + 6f * s.scale) {
+            val deleteBtnSize = 100f * s.scale
+            val deleteBtnX = infoX + infoW - deleteBtnSize - 20f * s.scale
+            val deleteBtnY = infoY + 20f * s.scale
+
+            val clickPadding = 15f * s.scale
+            if (x > deleteBtnX - clickPadding && x < deleteBtnX + deleteBtnSize + clickPadding &&
+                y > deleteBtnY - clickPadding && y < deleteBtnY + deleteBtnSize + clickPadding) {
                 val items = inventory.getItems()
                 if (inventory.selectedSlot < items.size) {
                     val item = items[inventory.selectedSlot]
@@ -1628,10 +1668,6 @@ class InventoryScreen(
                     }
                 }
             }
-        }
-
-        if (checkEquipmentSlotClick(x, y, width, height, inventory, onUnequip, s)) {
-            return true
         }
 
         // Клик по ячейке инвентаря
@@ -1658,7 +1694,6 @@ class InventoryScreen(
                         if (index < items.size) {
                             val item = items[index]
                             if (item != null && item.id.startsWith("rune_")) {
-                                // Пробуем вставить руну
                                 val success = insertRuneIntoItem(inventory, targetItemIndex, index)
                                 if (success) {
                                     onShowMessage("✅ Руна ${item.name} вставлена!")
@@ -1673,7 +1708,6 @@ class InventoryScreen(
                                 }
                             }
                         }
-                        // Если кликнули не по руне — выходим из режима
                         isRuneInjectionMode = false
                         targetItemIndex = -1
                         return true
@@ -1876,6 +1910,11 @@ class InventoryScreen(
 
     // ⭐ ЗАГРУЗКА ИКОНОК
     private fun loadItemIcon(item: Item): Bitmap? {
+
+        if (item.id.startsWith("rune_")) {
+            return runeManager.getRuneBitmap(item.id)
+        }
+
         return when (item.id) {
             // Мечи
             "sword_rusty", "sword_iron", "sword_steel", "sword_flame",
@@ -1915,9 +1954,6 @@ class InventoryScreen(
             // ⭐ МАТЕРИАЛЫ ДЛЯ ЗАТОЧКИ
             "oridecon" -> loadIcon("oridecon")
             "elunium" -> loadIcon("elunium")
-
-            // ⭐ РУНЫ
-            "rune_strength" -> loadIcon("rune_1")
 
             else -> null
         }

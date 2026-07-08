@@ -1,5 +1,6 @@
 package com.example.myapplication.model
 
+
 data class Player(
     var name: String = "Герой",
     var x: Float = 400f,
@@ -17,37 +18,53 @@ data class Player(
     var skillPoints: Int = 0,
     var gold: Int = 0,
 
-    // ===== ХАРАКТЕРИСТИКИ =====
     var strength: Int = 5,
     var endurance: Int = 5,
     var agility: Int = 5,
     var dexterity: Int = 5,
     var luck: Int = 5
 ) {
-    // ===== ПРОИЗВОДНЫЕ ХАРАКТЕРИСТИКИ =====
 
-    // Максимальное HP (зависит от выносливости)
-    // ⭐ Переименовал, чтобы не конфликтовать с полем maxHp
-    fun calculateMaxHp(): Float = 100f + endurance * 5
+    companion object {
+        const val BASE_SPEED = 5f
+        const val BASE_DODGE = 5f
+        const val BASE_CRIT = 5f
+        const val BASE_CRIT_DAMAGE = 1.5f
+        const val BASE_HIT_CHANCE = 80f
+    }
 
-    // ⭐ РАСЧЁТ УРОНА (с учётом оружия и характеристик)
+    // ⭐ БАЗОВОЕ МАКСИМАЛЬНОЕ HP (без учета рун)
+    fun calculateBaseMaxHp(): Float = 100f + endurance * 5f
+
+    // ⭐ ДЛЯ СОВМЕСТИМОСТИ со старым кодом (используется в BattleManager)
+    fun calculateMaxHp(): Float = calculateBaseMaxHp()
+
+    // ⭐ РАСЧЕТ МАКСИМАЛЬНОГО HP (с учетом рун)
+    fun getMaxHp(inventory: Inventory): Float {
+        val baseMaxHp = calculateBaseMaxHp()
+        val totalStats = inventory.getTotalStats()
+        return baseMaxHp + totalStats.health
+    }
+
+    // ⭐ РАСЧЕТ УРОНА (с учетом рун)
     fun getDamage(inventory: Inventory): Int {
         var baseDamage = 10f + strength * 2f
 
-        // Добавляем урон от оружия
         val weapon = inventory.getEquipment(EquipmentSlot.WEAPON)
         if (weapon != null) {
             baseDamage += weapon.getFinalAttack()
         }
 
+        val totalStats = inventory.getTotalStats()
+        baseDamage += totalStats.attack
+
         return baseDamage.toInt()
     }
 
-    // ⭐ РАСЧЁТ ЗАЩИТЫ (с учётом брони и щитов)
+    // ⭐ РАСЧЕТ ЗАЩИТЫ (с учетом рун)
     fun getDefense(inventory: Inventory): Int {
         var totalDefense = 0
 
-        // Суммируем защиту со всех предметов брони
         val armorSlots = listOf(
             EquipmentSlot.HELMET,
             EquipmentSlot.CHEST,
@@ -65,53 +82,65 @@ data class Player(
             }
         }
 
+        val totalStats = inventory.getTotalStats()
+        totalDefense += totalStats.defense
+
         return totalDefense
     }
 
-    // ⭐ РАСЧЁТ ДОПОЛНИТЕЛЬНЫХ СТАТОВ (аксессуары)
-    fun getBonusStats(inventory: Inventory): ItemStats {
-        var bonusHealth = 0
-        var bonusDodge = 0
-        var bonusCrit = 0
-        var bonusCritDamage = 0
-        var bonusHpRegen = 0
-        var bonusMoveSpeed = 0
-
-        val accessorySlots = listOf(
-            EquipmentSlot.RING1,
-            EquipmentSlot.RING2,
-            EquipmentSlot.NECKLACE
-        )
-
-        for (slot in accessorySlots) {
-            val item = inventory.getEquipment(slot)
-            if (item != null) {
-                bonusHealth += item.stats.health
-                bonusDodge += item.stats.dodge
-                bonusCrit += item.stats.crit
-                bonusCritDamage += item.stats.critDamage
-                bonusHpRegen += item.stats.hpRegen
-                bonusMoveSpeed += item.stats.moveSpeed
-            }
-        }
-
-        return ItemStats(
-            health = bonusHealth,
-            dodge = bonusDodge,
-            crit = bonusCrit,
-            critDamage = bonusCritDamage,
-            hpRegen = bonusHpRegen,
-            moveSpeed = bonusMoveSpeed
-        )
+    // ⭐ РАСЧЕТ РЕГЕНЕРАЦИИ HP (с учетом рун)
+    fun getHpRegen(inventory: Inventory): Float {
+        val baseRegen = 1f + endurance * 0.05f
+        val totalStats = inventory.getTotalStats()
+        return baseRegen + totalStats.hpRegen
     }
 
-    fun getDodgeChance(): Float = 5f + agility * 2f
+    // ⭐ РАСЧЕТ УВОРОТА (с учетом рун)
+    fun getDodgeChance(inventory: Inventory): Float {
+        val baseDodge = 5f + agility * 2f
+        val totalStats = inventory.getTotalStats()
+        return baseDodge + totalStats.dodge
+    }
 
-    fun getHitChance(): Float = 80f + dexterity * 2f
+    // ⭐ РАСЧЕТ ТОЧНОСТИ (с учетом рун)
+    fun getHitChance(inventory: Inventory): Float {
+        val baseHit = BASE_HIT_CHANCE + dexterity * 2f
+        // Точность не имеет прямых рун, но может быть добавлена позже
+        return baseHit
+    }
 
-    fun getCritChance(): Float = 5f + luck * 2f
+    // ⭐ РАСЧЕТ ШАНСА КРИТА (с учетом рун)
+    fun getCritChance(inventory: Inventory): Float {
+        val baseCrit = 5f + luck * 2f
+        val totalStats = inventory.getTotalStats()
+        return baseCrit + totalStats.crit
+    }
 
-    fun getCritDamage(): Float = 1.5f + luck * 0.1f
+    // ⭐ РАСЧЕТ УРОНА КРИТА (с учетом рун)
+    fun getCritDamage(inventory: Inventory): Float {
+        val baseCritDamage = 1.5f + luck * 0.1f
+        val totalStats = inventory.getTotalStats()
+        return baseCritDamage + totalStats.critDamage / 100f
+    }
+
+    // ⭐ РАСЧЕТ СКОРОСТИ (с учетом рун)
+    fun getSpeed(inventory: Inventory): Float {
+        val baseSpeed = BASE_SPEED
+        val totalStats = inventory.getTotalStats()
+        return baseSpeed + totalStats.moveSpeed / 10f
+    }
+
+    // ⭐ РАСЧЕТ БОНУСА К ЗОЛОТУ (с учетом рун)
+    fun getGoldBonus(inventory: Inventory): Int {
+        val totalStats = inventory.getTotalStats()
+        return totalStats.goldBonus
+    }
+
+    // ⭐ РАСЧЕТ БОНУСА К ОПЫТУ (с учетом рун)
+    fun getExpBonus(inventory: Inventory): Int {
+        val totalStats = inventory.getTotalStats()
+        return totalStats.expBonus
+    }
 
     fun checkLevelUp(): Boolean {
         if (exp >= maxExp) {
@@ -131,7 +160,7 @@ data class Player(
             StatType.STRENGTH -> strength++
             StatType.ENDURANCE -> {
                 endurance++
-                hp = calculateMaxHp()
+                hp = calculateBaseMaxHp()
             }
             StatType.AGILITY -> agility++
             StatType.DEXTERITY -> dexterity++

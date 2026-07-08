@@ -23,6 +23,7 @@ import kotlin.random.Random
 class DropManager {
 
     private val dropConfigs = mutableListOf<MobDrop>()
+    private val bossDropConfigs = mutableListOf<MobDrop>()
     private val random = Random
 
     init {
@@ -30,6 +31,258 @@ class DropManager {
     }
 
     private fun initDrops() {
+
+        initBossRunes()
+
+        initNormalDrops()
+    }
+
+    private fun initBossRunes() {
+
+// ⭐ БОСС-РУНЫ (уникальные для каждого босса)
+
+// 1. Флаффи-босс (тип 0) - Руна ярости
+        bossDropConfigs.add(
+            MobDrop(
+                mobType = 0,
+                minLevel = 1,
+                maxLevel = 99,
+                dropTable = DropTable.createMixedDrop(
+                    DropTable.DropEntry(
+                        itemId = "rune_fury",
+                        itemName = "Руна ярости",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.EPIC,
+                        chance = 10.0, // 100% шанс для босса
+                        description = "Увеличивает атаку на 10 💢",
+                        runeStats = ItemStats(attack = 10),
+                        quantity = 1
+                    )
+                ),
+                goldMin = 50,
+                goldMax = 100,
+                goldChance = 100
+            )
+        )
+
+// 2. Паук-босс (тип 1) - Руна паука
+        bossDropConfigs.add(
+            MobDrop(
+                mobType = 1,
+                minLevel = 1,
+                maxLevel = 99,
+                dropTable = DropTable.createMixedDrop(
+                    DropTable.DropEntry(
+                        itemId = "rune_spider",
+                        itemName = "Руна паука",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.EPIC,
+                        chance = 10.0,
+                        description = "Увеличивает защиту на 10 🕷️",
+                        runeStats = ItemStats(defense = 10),
+                        quantity = 1
+                    )
+                ),
+                goldMin = 50,
+                goldMax = 100,
+                goldChance = 100
+            )
+        )
+
+// 3. Многоглаз-босс (тип 2) - Руна мудрости
+        bossDropConfigs.add(
+            MobDrop(
+                mobType = 2,
+                minLevel = 1,
+                maxLevel = 99,
+                dropTable = DropTable.createMixedDrop(
+                    DropTable.DropEntry(
+                        itemId = "rune_wisdom",
+                        itemName = "Руна мудрости",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.EPIC,
+                        chance = 10.0,
+                        description = "Увеличивает крит на 5% и крит. урон на 10% 🧠",
+                        runeStats = ItemStats(crit = 5, critDamage = 10),
+                        quantity = 1
+                    )
+                ),
+                goldMin = 60,
+                goldMax = 120,
+                goldChance = 100
+            )
+        )
+
+// 4. Красный рыцарь-босс (тип 3) - Руна рыцаря
+        bossDropConfigs.add(
+            MobDrop(
+                mobType = 3,
+                minLevel = 1,
+                maxLevel = 99,
+                dropTable = DropTable.createMixedDrop(
+                    DropTable.DropEntry(
+                        itemId = "rune_knight",
+                        itemName = "Руна рыцаря",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.EPIC,
+                        chance = 10.0,
+                        description = "Увеличивает защиту на 8 и HP на 20 🗡️",
+                        runeStats = ItemStats(defense = 8, health = 20),
+                        quantity = 1
+                    )
+                ),
+                goldMin = 60,
+                goldMax = 120,
+                goldChance = 100
+            )
+        )
+
+// 5. Зелёный слизень-босс (тип 4) - Руна выносливости
+        bossDropConfigs.add(
+            MobDrop(
+                mobType = 4,
+                minLevel = 1,
+                maxLevel = 99,
+                dropTable = DropTable.createMixedDrop(
+                    DropTable.DropEntry(
+                        itemId = "rune_endurance",
+                        itemName = "Руна выносливости",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.EPIC,
+                        chance = 10.0,
+                        description = "Увеличивает HP на 30 и регенерацию на 3 HP/сек 💚",
+                        runeStats = ItemStats(health = 30, hpRegen = 3),
+                        quantity = 1
+                    )
+                ),
+                goldMin = 70,
+                goldMax = 140,
+                goldChance = 100
+            )
+        )
+
+// 6. Стальной рыцарь-босс (тип 5) - Руна стали
+        bossDropConfigs.add(
+            MobDrop(
+                mobType = 5,
+                minLevel = 1,
+                maxLevel = 99,
+                dropTable = DropTable.createMixedDrop(
+                    DropTable.DropEntry(
+                        itemId = "rune_steel",
+                        itemName = "Руна стали",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.LEGENDARY,
+                        chance = 10.0,
+                        description = "Увеличивает защиту на 12 ⛓️",
+                        runeStats = ItemStats(defense = 12),
+                        quantity = 1
+                    )
+                ),
+                goldMin = 80,
+                goldMax = 160,
+                goldChance = 100
+            )
+        )
+
+// 7. Гоблин-босс (тип 6) - Руна алчности
+        bossDropConfigs.add(
+            MobDrop(
+                mobType = 6,
+                minLevel = 1,
+                maxLevel = 99,
+                dropTable = DropTable.createMixedDrop(
+                    DropTable.DropEntry(
+                        itemId = "rune_greed",
+                        itemName = "Руна алчности",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.LEGENDARY,
+                        chance = 10.0,
+                        description = "Увеличивает получаемое золото на 15% 💰",
+                        runeStats = ItemStats(goldBonus = 15),
+                        quantity = 1
+                    )
+                ),
+                goldMin = 100,
+                goldMax = 200,
+                goldChance = 100
+            )
+        )
+
+// 8. Монах-босс (тип 7) - Руна просветления
+        bossDropConfigs.add(
+            MobDrop(
+                mobType = 7,
+                minLevel = 1,
+                maxLevel = 99,
+                dropTable = DropTable.createMixedDrop(
+                    DropTable.DropEntry(
+                        itemId = "rune_enlightenment",
+                        itemName = "Руна просветления",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.LEGENDARY,
+                        chance = 10.0,
+                        description = "Увеличивает получаемый опыт на 15% ✨",
+                        runeStats = ItemStats(expBonus = 15),
+                        quantity = 1
+                    )
+                ),
+                goldMin = 100,
+                goldMax = 200,
+                goldChance = 100
+            )
+        )
+
+// 9. Орк-босс (тип 8) - Руна ярости орка
+        bossDropConfigs.add(
+            MobDrop(
+                mobType = 8,
+                minLevel = 1,
+                maxLevel = 99,
+                dropTable = DropTable.createMixedDrop(
+                    DropTable.DropEntry(
+                        itemId = "rune_ork_fury",
+                        itemName = "Руна ярости орка",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.LEGENDARY,
+                        chance = 10.0,
+                        description = "Увеличивает атаку на 15 и крит на 5% 🗡️💥",
+                        runeStats = ItemStats(attack = 15, crit = 5),
+                        quantity = 1
+                    )
+                ),
+                goldMin = 120,
+                goldMax = 240,
+                goldChance = 100
+            )
+        )
+
+// 10. Тролль-босс (тип 9) - Руна тролля
+        bossDropConfigs.add(
+            MobDrop(
+                mobType = 9,
+                minLevel = 1,
+                maxLevel = 99,
+                dropTable = DropTable.createMixedDrop(
+                    DropTable.DropEntry(
+                        itemId = "rune_troll",
+                        itemName = "Руна тролля",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.MYTHIC,
+                        chance = 10.0,
+                        description = "Увеличивает HP на 40, регенерацию на 5 HP/сек и крит. урон на 5% 🧌",
+                        runeStats = ItemStats(health = 40, hpRegen = 5, critDamage = 5),
+                        quantity = 1
+                    )
+                ),
+                goldMin = 150,
+                goldMax = 300,
+                goldChance = 100
+            )
+        )
+    }
+
+    private fun initNormalDrops() {
         // ============================================
         // 1. ФЛАФФИ (тип 0) — уровни 1-9
         // ============================================
@@ -759,7 +1012,7 @@ class DropManager {
                         itemName = "Легендарный меч",
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.LEGENDARY,
-                        chance = 4.0,
+                        chance = 1.0,
                         stats = ItemStats(attack = 45),
                         description = "Меч древних героев"
                     ),
@@ -768,7 +1021,7 @@ class DropManager {
                         itemName = "Стальная броня",
                         itemType = Item.ItemType.CHEST,
                         rarity = ItemRarity.EPIC,
-                        chance = 3.0,
+                        chance = 2.0,
                         stats = ItemStats(defense = 22),
                         description = "Прочная стальная броня 🛡️"
                     ),
@@ -780,6 +1033,16 @@ class DropManager {
                         chance = 0.5,
                         stats = ItemStats(attack = 58),
                         description = "Оружие богов"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "rune_defense",
+                        itemName = "Руна защиты",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.RARE,
+                        chance = 2.0,
+                        description = "Увеличивает защиту на 3 🛡️",
+                        runeStats = ItemStats(defense = 3),
+                        quantity = 1
                     ),
                     DropTable.DropEntry(
                         itemId = "cake_large",
@@ -829,7 +1092,7 @@ class DropManager {
                         itemName = "Легендарный меч",
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.LEGENDARY,
-                        chance = 0.2,
+                        chance = 0.3,
                         stats = ItemStats(attack = 48),
                         description = "Меч древних героев"
                     ),
@@ -838,7 +1101,7 @@ class DropManager {
                         itemName = "Мифический клинок",
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.MYTHIC,
-                        chance = 0.4,
+                        chance = 0.1,
                         stats = ItemStats(attack = 60),
                         description = "Оружие богов"
                     ),
@@ -868,6 +1131,16 @@ class DropManager {
                         chance = 0.2,
                         stats = ItemStats(health = 20, dodge = 5),
                         description = "Кольцо, найденное у гоблина 💍"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "rune_health",
+                        itemName = "Руна жизни",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.RARE,
+                        chance = 2.0,
+                        description = "Увеличивает HP на 15 ❤️",
+                        runeStats = ItemStats(health = 15),
+                        quantity = 1
                     ),
                     DropTable.DropEntry(
                         itemId = "cake_large",
@@ -917,7 +1190,7 @@ class DropManager {
                         itemName = "Перчатки монаха",
                         itemType = Item.ItemType.GLOVES,
                         rarity = ItemRarity.EPIC,
-                        chance = 30.0,
+                        chance = 1.0,
                         stats = ItemStats(defense = 8, health = 6),
                         description = "Перчатки, укрепляющие силу духа 🥊"
                     ),
@@ -926,7 +1199,7 @@ class DropManager {
                         itemName = "Штаны монаха",
                         itemType = Item.ItemType.PANTS,
                         rarity = ItemRarity.EPIC,
-                        chance = 30.0,
+                        chance = 1.0,
                         stats = ItemStats(defense = 8, health = 8),
                         description = "Удобные штаны для долгих странствий 👖"
                     ),
@@ -935,7 +1208,7 @@ class DropManager {
                         itemName = "Деревянный щит",
                         itemType = Item.ItemType.SHIELD,
                         rarity = ItemRarity.EPIC,
-                        chance = 30.0,
+                        chance = 1.0,
                         stats = ItemStats(defense = 22),
                         description = "Крепкий деревянный щит 🛡️"
                     ),
@@ -944,7 +1217,7 @@ class DropManager {
                         itemName = "Мощный меч",
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.EPIC,
-                        chance = 0.5,
+                        chance = 0.3,
                         stats = ItemStats(attack = 38),
                         description = "Мощный меч"
                     ),
@@ -966,15 +1239,15 @@ class DropManager {
                         stats = ItemStats(health = 30, hpRegen = 3),
                         description = "Древнее ожерелье, повышающее живучесть 📿"
                     ),
-                        DropTable.DropEntry(
-                            itemId = "rune_strength",
-                            itemName = "Руна силы",
-                            itemType = Item.ItemType.CONSUMABLE,
-                            rarity = ItemRarity.RARE,
-                            chance = 55.0,
-                            description = "Увеличивает атаку на 3 💎",
-                            runeStats = ItemStats(attack = 3)
-                        ),
+                    DropTable.DropEntry(
+                        itemId = "rune_strength",
+                        itemName = "Руна силы",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.RARE,
+                        chance = 2.0,
+                        description = "Увеличивает атаку на 3 💎",
+                        runeStats = ItemStats(attack = 3)
+                    ),
                     DropTable.DropEntry(
                         itemId = "cake_large",
                         itemName = "Большой торт",
@@ -1023,7 +1296,7 @@ class DropManager {
                         itemName = "Броня орка",
                         itemType = Item.ItemType.CHEST,
                         rarity = ItemRarity.RARE,
-                        chance = 30.0,
+                        chance = 1.0,
                         stats = ItemStats(defense = 14),
                         description = "Тяжёлая броня, снятая с поверженного орка 🛡️"
                     ),
@@ -1032,7 +1305,7 @@ class DropManager {
                         itemName = "Лунный меч",
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.EPIC,
-                        chance = 10.0,
+                        chance = 0.3,
                         stats = ItemStats(attack = 42),
                         description = "Меч, светящийся в лунном свете"
                     ),
@@ -1053,6 +1326,16 @@ class DropManager {
                         chance = 0.2,
                         stats = ItemStats(health = 30, crit = 3, critDamage = 5),
                         description = "Древнее мощное кольцо силы 💍"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "rune_crit",
+                        itemName = "Руна крита",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.EPIC,
+                        chance = 2.0,
+                        description = "Увеличивает шанс крита на 5% 💥",
+                        runeStats = ItemStats(crit = 5),
+                        quantity = 1
                     ),
                     DropTable.DropEntry(
                         itemId = "cake_large",
@@ -1102,7 +1385,7 @@ class DropManager {
                         itemName = "Сапоги тролля",
                         itemType = Item.ItemType.BOOTS,
                         rarity = ItemRarity.RARE,
-                        chance = 40.0,
+                        chance = 1.0,
                         stats = ItemStats(defense = 12),
                         description = "Массивные сапоги, снятые с тролля 👢"
                     ),
@@ -1111,7 +1394,7 @@ class DropManager {
                         itemName = "Пламенный меч",
                         itemType = Item.ItemType.WEAPON,
                         rarity = ItemRarity.EPIC,
-                        chance = 30.0,
+                        chance = 0.3,
                         stats = ItemStats(attack = 48),
                         description = "Меч, пылающий огнём"
                     ),
@@ -1120,7 +1403,7 @@ class DropManager {
                         itemName = "Деревянный щит",
                         itemType = Item.ItemType.SHIELD,
                         rarity = ItemRarity.EPIC,
-                        chance = 0.4,
+                        chance = 0.3,
                         stats = ItemStats(defense = 24),
                         description = "Крепкий деревянный щит 🛡️"
                     ),
@@ -1132,6 +1415,16 @@ class DropManager {
                         chance = 0.2,
                         stats = ItemStats(health = 35, crit = 5, critDamage = 10, dodge = 5),
                         description = "Древнее мощное кольцо силы 💍"
+                    ),
+                    DropTable.DropEntry(
+                        itemId = "rune_regen",
+                        itemName = "Руна регенерации",
+                        itemType = Item.ItemType.CONSUMABLE,
+                        rarity = ItemRarity.EPIC,
+                        chance = 2.0,
+                        description = "Восстанавливает 2 HP/сек 🔄",
+                        runeStats = ItemStats(hpRegen = 2),
+                        quantity = 1
                     ),
                     DropTable.DropEntry(
                         itemId = "cake_large",
@@ -1167,32 +1460,38 @@ class DropManager {
         )
     }
 
+    // ============================================
+    // ⭐ ПОЛУЧЕНИЕ ДРОПА
+    // ============================================
     fun getDropForMob(mob: Mob): Pair<List<Item>, Int> {
+        println("🔍 getDropForMob: тип=${mob.type}, уровень=${mob.level}, isBoss=${mob.isBoss}")
+
+        // ⭐ ЕСЛИ ЭТО БОСС - ИЩЕМ В БОСС-КОНФИГАХ
+        if (mob.isBoss) {
+            for (config in bossDropConfigs) {
+                if (config.matches(mob)) {
+                    println("👑 Найден БОСС-конфиг для типа ${mob.type}")
+                    val (items, gold) = config.getDrop(random)
+                    println("👑 Босс дроп: ${items.size} предметов, ${gold} золота")
+                    for (item in items) {
+                        println("   - ${item.name} (${item.id})")
+                    }
+                    return Pair(items, gold)
+                }
+            }
+            println("⚠️ Босс-конфиг НЕ НАЙДЕН для типа ${mob.type}, используем обычный")
+        }
+
+        // ⭐ ОБЫЧНЫЙ ДРОП (для обычных мобов или если босс-конфиг не найден)
         for (config in dropConfigs) {
             if (config.matches(mob)) {
                 val (items, gold) = config.getDrop(random)
-
-                if (mob.isBoss) {
-                    val boostedItems = mutableListOf<Item>()
-                    val multiplier = 3
-                    for (item in items) {
-                        for (i in 0 until multiplier) {
-                            val boostedItem = item.copy(
-                                id = "${item.id}_${i}",
-                                name = if (i > 0) "${item.name} (${i+1})" else item.name
-                            )
-                            boostedItems.add(boostedItem)
-                        }
-                    }
-                    val boostedGold = gold * (3 + random.nextInt(3))
-                    println("👑 Босс дроп: ${boostedItems.size} предметов, ${boostedGold} золота")
-                    return Pair(boostedItems, boostedGold)
-                }
-
+                println("📦 Обычный дроп: ${items.size} предметов, ${gold} золота")
                 return Pair(items, gold)
             }
         }
 
+        println("❌ Конфиг не найден для типа ${mob.type}, уровень ${mob.level}")
         val defaultGold = random.nextInt(1, 4)
         return Pair(emptyList(), defaultGold)
     }

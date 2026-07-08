@@ -1,6 +1,7 @@
 package com.example.myapplication.model
 
 import android.graphics.Bitmap
+import android.graphics.Color
 import kotlin.math.min
 
 enum class ItemRarity {
@@ -219,12 +220,31 @@ data class Item(
     }
 
     fun isStackable(): Boolean {
-        return type == ItemType.CONSUMABLE && refineLevel == 0 && runes.isEmpty()
+        return type == Item.ItemType.CONSUMABLE &&
+                refineLevel == 0 &&
+                runes.isEmpty() &&
+                !id.startsWith("rune_")
     }
 
     fun addQuantity(amount: Int = 1): Item {
         this.quantity += amount
         return this
+    }
+
+    fun getRuneColor(): Int {
+        return when (id) {
+            "rune_strength" -> Color.rgb(255, 100, 50)    // Оранжевый
+            "rune_defense" -> Color.rgb(50, 150, 255)     // Синий
+            "rune_health" -> Color.rgb(255, 50, 50)       // Красный
+            "rune_regen" -> Color.rgb(50, 255, 100)       // Зеленый
+            "rune_crit" -> Color.rgb(255, 200, 50)        // Золотой
+            "rune_crit_damage" -> Color.rgb(200, 50, 255) // Фиолетовый
+            "rune_gold" -> Color.rgb(255, 215, 0)         // Желтый
+            "rune_exp" -> Color.rgb(100, 200, 255)        // Голубой
+            "rune_dodge" -> Color.rgb(100, 255, 200)      // Бирюзовый
+            "rune_speed" -> Color.rgb(255, 100, 200)      // Розовый
+            else -> Color.WHITE
+        }
     }
 
     fun use(player: Player): Boolean {

@@ -3,6 +3,7 @@ package com.example.myapplication.ui
 import android.graphics.*
 import com.example.myapplication.model.Inventory
 import com.example.myapplication.model.Player
+import kotlin.math.max
 
 class StatsScreen {
 
@@ -14,7 +15,6 @@ class StatsScreen {
         val maxLevel: Int = 99
     )
 
-    // ⭐ КОНСТАНТЫ ДЛЯ КООРДИНАТ
     private val STATS_START_Y = 220f
     private val STAT_ITEM_HEIGHT = 70f
     private val STATS_COUNT = 5
@@ -41,7 +41,7 @@ class StatsScreen {
         }
         canvas.drawRect(0f, 0f, width, height, bgPaint)
 
-        // ⭐ ЗОЛОТО (СЛЕВА СВЕРХУ)
+        // ЗОЛОТО (СЛЕВА СВЕРХУ)
         val goldPaint = Paint().apply {
             color = Color.rgb(255, 215, 0)
             textSize = 32f
@@ -50,7 +50,7 @@ class StatsScreen {
         }
         canvas.drawText("💰 ${player.gold}", 30f, 75f, goldPaint)
 
-        // ⭐ КНОПКА ЗАКРЫТИЯ (КРЕСТИК СПРАВА СВЕРХУ)
+        // КНОПКА ЗАКРЫТИЯ
         drawCloseButton(canvas, width)
 
         // --- ЗАГОЛОВОК ---
@@ -81,15 +81,16 @@ class StatsScreen {
             textSize = 18f
             textAlign = Paint.Align.CENTER
         }
+
         canvas.drawText(
-            "❤️ HP: ${player.hp.toInt()}/${player.calculateMaxHp().toInt()}  ⚔️ Урон: $damage",
+            "❤️ HP: ${player.hp.toInt()}/${player.getMaxHp(inventory).toInt()}  ⚔️ Урон: $damage",
             width / 2,
             155f,
             statsPaint
         )
 
         canvas.drawText(
-            "🛡️ Защита: $defense  💨 Уворот: ${player.getDodgeChance().toInt()}%  🎯 Точность: ${player.getHitChance().toInt()}%  💥 Крит: ${player.getCritChance().toInt()}% (x${String.format("%.1f", player.getCritDamage())})",
+            "🛡️ Защита: $defense  💨 Уворот: ${player.getDodgeChance(inventory).toInt()}%  🎯 Точность: ${player.getHitChance(inventory).toInt()}%  💥 Крит: ${player.getCritChance(inventory).toInt()}% (x${String.format("%.1f", player.getCritDamage(inventory))})",
             width / 2,
             180f,
             statsPaint
@@ -106,8 +107,10 @@ class StatsScreen {
             Triple(Player.StatType.LUCK, "🍀 Удача", "Увеличивает крит")
         )
 
+        var currentY = startY
         for ((index, stat) in stats.withIndex()) {
             val y = startY + index * itemHeight
+            currentY = y + itemHeight
 
             // Фон строки
             val rowPaint = Paint().apply {
@@ -177,8 +180,11 @@ class StatsScreen {
             canvas.drawText(stat.third, 50f, y + 65f, descPaint)
         }
 
-        // ⭐ КНОПКА СБРОСА ХАРАКТЕРИСТИК (ВНИЗУ)
-        val resetY = startY + stats.size * itemHeight + 30f
+        // ⭐ ДОБАВЛЯЕМ ОТОБРАЖЕНИЕ БОНУСОВ ОТ РУН
+        currentY = drawRuneBonuses(canvas, width, height, player, inventory, currentY + 20f)
+
+        // КНОПКА СБРОСА ХАРАКТЕРИСТИК (ВНИЗУ)
+        val resetY = max(currentY + 30f, startY + stats.size * itemHeight + 30f)
 
         // Фон для кнопки
         val resetBgPaint = Paint().apply {
@@ -226,11 +232,13 @@ class StatsScreen {
         }
         canvas.drawText(resetText, width / 2, resetY + 48f, resetTextPaint)
 
-        // ⭐ ОКНО ПОДТВЕРЖДЕНИЯ СБРОСА
+        // ОКНО ПОДТВЕРЖДЕНИЯ СБРОСА
         if (showResetConfirm) {
             drawResetConfirmDialog(canvas, width, height)
         }
     }
+
+
 
     // ⭐ КНОПКА ЗАКРЫТИЯ
     private fun drawCloseButton(canvas: Canvas, width: Float) {
@@ -489,6 +497,149 @@ class StatsScreen {
             }
         }
         return false
+    }
+
+    private fun drawRuneBonuses(
+        canvas: Canvas,
+        width: Float,
+        height: Float,
+        player: Player,
+        inventory: Inventory,
+        startY: Float
+    ): Float {
+        val totalStats = inventory.getTotalStats()
+
+        // Проверяем, есть ли вообще бонусы
+        val hasBonuses = totalStats.attack > 0 || totalStats.defense > 0 ||
+                totalStats.health > 0 || totalStats.dodge > 0 ||
+                totalStats.crit > 0 || totalStats.critDamage > 0 ||
+                totalStats.hpRegen > 0 || totalStats.moveSpeed > 0 ||
+                totalStats.goldBonus > 0 || totalStats.expBonus > 0
+
+        if (!hasBonuses) {
+            return startY
+        }
+
+        // Заголовок
+        val titlePaint = Paint().apply {
+            color = Color.rgb(255, 215, 0)
+            textSize = 24f
+            textAlign = Paint.Align.LEFT
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        canvas.drawText("✨ Активные бонусы от рун и вещей:", 30f, startY + 30f, titlePaint)
+
+        var currentY = startY + 50f
+        val bonusPaint = Paint().apply {
+            color = Color.argb(200, 200, 255, 200)
+            textSize = 20f
+            textAlign = Paint.Align.LEFT
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        val valuePaint = Paint().apply {
+            color = Color.rgb(100, 255, 100)
+            textSize = 20f
+            textAlign = Paint.Align.RIGHT
+            typeface = Typeface.DEFAULT_BOLD
+        }
+
+        // Список бонусов
+        val bonuses = mutableListOf<Pair<String, Int>>()
+
+        if (totalStats.attack > 0) {
+            bonuses.add("⚔️ Атака" to totalStats.attack)
+        }
+        if (totalStats.defense > 0) {
+            bonuses.add("🛡️ Защита" to totalStats.defense)
+        }
+        if (totalStats.health > 0) {
+            bonuses.add("❤️ HP" to totalStats.health)
+        }
+        if (totalStats.dodge > 0) {
+            bonuses.add("💨 Уворот" to totalStats.dodge)
+        }
+        if (totalStats.crit > 0) {
+            bonuses.add("💥 Крит" to totalStats.crit)
+        }
+        if (totalStats.critDamage > 0) {
+            bonuses.add("⚡ Крит. урон" to totalStats.critDamage)
+        }
+        if (totalStats.hpRegen > 0) {
+            bonuses.add("🔄 Регенерация" to totalStats.hpRegen)
+        }
+        if (totalStats.moveSpeed > 0) {
+            bonuses.add("🏃 Скорость" to totalStats.moveSpeed)
+        }
+        if (totalStats.goldBonus > 0) {
+            bonuses.add("💰 Золото" to totalStats.goldBonus)
+        }
+        if (totalStats.expBonus > 0) {
+            bonuses.add("⭐ Опыт" to totalStats.expBonus)
+        }
+
+        // Если бонусов много, разбиваем на 2 колонки
+        if (bonuses.size > 5) {
+            val midIndex = (bonuses.size + 1) / 2
+            val leftBonuses = bonuses.subList(0, midIndex)
+            val rightBonuses = bonuses.subList(midIndex, bonuses.size)
+
+            val maxWidth = 250f
+            val spacing = 35f
+
+            for (i in leftBonuses.indices) {
+                val y = currentY + i * spacing
+                val (name, value) = leftBonuses[i]
+
+                val bgPaint = Paint().apply {
+                    color = Color.argb(40, 255, 255, 255)
+                }
+                canvas.drawRoundRect(
+                    RectF(30f, y - 15f, 30f + maxWidth, y + 15f),
+                    8f, 8f, bgPaint
+                )
+
+                canvas.drawText(name, 40f, y + 7f, bonusPaint)
+                canvas.drawText("+$value", 30f + maxWidth - 10f, y + 7f, valuePaint)
+            }
+
+            for (i in rightBonuses.indices) {
+                val y = currentY + i * spacing
+                val (name, value) = rightBonuses[i]
+
+                val bgPaint = Paint().apply {
+                    color = Color.argb(40, 255, 255, 255)
+                }
+                val xOffset = width / 2 + 20f
+                canvas.drawRoundRect(
+                    RectF(xOffset, y - 15f, xOffset + maxWidth, y + 15f),
+                    8f, 8f, bgPaint
+                )
+
+                canvas.drawText(name, xOffset + 10f, y + 7f, bonusPaint)
+                canvas.drawText("+$value", xOffset + maxWidth - 10f, y + 7f, valuePaint)
+            }
+
+            currentY += leftBonuses.size * spacing + 20f
+        } else {
+            // Все бонусы в одну колонку
+            for ((name, value) in bonuses) {
+                val bgPaint = Paint().apply {
+                    color = Color.argb(40, 255, 255, 255)
+                }
+                canvas.drawRoundRect(
+                    RectF(30f, currentY - 15f, width - 30f, currentY + 15f),
+                    8f, 8f, bgPaint
+                )
+
+                canvas.drawText(name, 40f, currentY + 7f, bonusPaint)
+                canvas.drawText("+$value", width - 40f, currentY + 7f, valuePaint)
+
+                currentY += 35f
+            }
+            currentY += 10f
+        }
+
+        return currentY
     }
 
 }

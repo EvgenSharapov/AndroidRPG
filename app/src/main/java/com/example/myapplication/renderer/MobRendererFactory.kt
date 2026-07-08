@@ -1,9 +1,12 @@
 package com.example.myapplication.renderer
 
 import com.example.myapplication.model.IMobRenderer
+import com.example.myapplication.model.MobAction
+import com.example.myapplication.renderer.mobs.*
 
 object MobRendererFactory {
     private val renderers = mutableMapOf<Int, IMobRenderer>()
+    private val defaultRenderer = DefaultMobRenderer()
 
     init {
         register(0, FluffyRenderer())
@@ -18,6 +21,19 @@ object MobRendererFactory {
         register(9, TrollRenderer())
     }
 
-    fun getRenderer(type: Int): IMobRenderer = renderers[type] ?: DefaultRenderer()
-    private fun register(type: Int, renderer: IMobRenderer) { renderers[type] = renderer }
+    fun getRenderer(type: Int): IMobRenderer {
+        return renderers[type] ?: defaultRenderer
+    }
+
+    private fun register(type: Int, renderer: IMobRenderer) {
+        renderers[type] = renderer
+    }
+}
+
+class DefaultMobRenderer : BaseMobRenderer(
+    spriteName = "default",
+    fallbackColor = android.graphics.Color.GRAY,
+    size = 25f
+) {
+    override fun getAnimationName(action: MobAction): String = "idle"
 }

@@ -8,6 +8,7 @@ import com.google.gson.reflect.TypeToken
 
 class SaveManager(context: Context) {
 
+    // ⭐ ОБЪЯВЛЯЕМ prefs
     private val prefs: SharedPreferences = context.getSharedPreferences("game_save", Context.MODE_PRIVATE)
     private val gson = Gson()
 
@@ -50,9 +51,8 @@ class SaveManager(context: Context) {
         editor.putInt(KEY_DEXTERITY, player.dexterity)
         editor.putInt(KEY_LUCK, player.luck)
 
-        // ⭐ ИНВЕНТАРЬ (сериализуем в JSON)
+        // Инвентарь
         val items = inventory.getItems()
-        // ⭐ ПРОВЕРЯЕМ, ЧТО У ВСЕХ ПРЕДМЕТОВ ИНИЦИАЛИЗИРОВАНЫ RUNES
         for (item in items) {
             if (item != null && item.runes == null) {
                 item.runes = mutableListOf()
@@ -62,9 +62,8 @@ class SaveManager(context: Context) {
         editor.putString(KEY_INVENTORY, itemsJson)
         println("📦 Инвентарь сохранён: ${items.count { it != null }} предметов")
 
-        // ⭐ ЭКИПИРОВКА (сериализуем в JSON)
+        // Экипировка
         val equipment = inventory.getAllEquipment()
-        // ⭐ ПРОВЕРЯЕМ РУНЫ В ЭКИПИРОВКЕ
         for ((_, item) in equipment) {
             if (item.runes == null) {
                 item.runes = mutableListOf()
@@ -88,7 +87,7 @@ class SaveManager(context: Context) {
         }
 
         try {
-            // ⭐ ОСНОВНЫЕ ПАРАМЕТРЫ
+            // Основные параметры
             player.gold = prefs.getInt(KEY_GOLD, 0)
             player.level = prefs.getInt(KEY_LEVEL, 1)
             player.exp = prefs.getInt(KEY_EXP, 0)
@@ -97,21 +96,20 @@ class SaveManager(context: Context) {
             player.hp = prefs.getFloat(KEY_HP, 100f)
             player.name = prefs.getString(KEY_PLAYER_NAME, "Герой") ?: "Герой"
 
-            // ⭐ ХАРАКТЕРИСТИКИ
+            // Характеристики
             player.strength = prefs.getInt(KEY_STRENGTH, 5)
             player.endurance = prefs.getInt(KEY_ENDURANCE, 5)
             player.agility = prefs.getInt(KEY_AGILITY, 5)
             player.dexterity = prefs.getInt(KEY_DEXTERITY, 5)
             player.luck = prefs.getInt(KEY_LUCK, 5)
 
-            // ⭐ ИНВЕНТАРЬ
+            // Инвентарь
             val itemsJson = prefs.getString(KEY_INVENTORY, null)
             if (itemsJson != null) {
                 try {
                     val type = object : TypeToken<List<Item?>>() {}.type
                     val loadedItems: List<Item?> = gson.fromJson(itemsJson, type)
 
-                    // ⭐ ИНИЦИАЛИЗИРУЕМ RUNES ДЛЯ КАЖДОГО ПРЕДМЕТА
                     for (item in loadedItems) {
                         if (item != null && item.runes == null) {
                             item.runes = mutableListOf()
@@ -125,14 +123,13 @@ class SaveManager(context: Context) {
                 }
             }
 
-            // ⭐ ЭКИПИРОВКА
+            // Экипировка
             val equipmentJson = prefs.getString(KEY_EQUIPMENT, null)
             if (equipmentJson != null) {
                 try {
                     val type = object : TypeToken<Map<EquipmentSlot, Item>>() {}.type
                     val loadedEquipment: Map<EquipmentSlot, Item> = gson.fromJson(equipmentJson, type)
 
-                    // ⭐ ИНИЦИАЛИЗИРУЕМ RUNES ДЛЯ КАЖДОГО ПРЕДМЕТА В ЭКИПИРОВКЕ
                     for ((_, item) in loadedEquipment) {
                         if (item.runes == null) {
                             item.runes = mutableListOf()
@@ -146,7 +143,28 @@ class SaveManager(context: Context) {
                 }
             }
 
+            // ⭐ ПРИМЕНЯЕМ БОНУСЫ ОТ РУН ПРИ ЗАГРУЗКЕ
+            // Обновляем максимальное HP с учетом рун
+            val maxHp = player.getMaxHp(inventory)
+            if (player.hp > maxHp) {
+                player.hp = maxHp
+            }
+
+            // Обновляем скорость с учетом рун
+            player.speed = player.getSpeed(inventory)
+
+            // Проверяем, не нужно ли повысить уровень
+            while (player.exp >= player.maxExp) {
+                player.exp -= player.maxExp
+                player.level++
+                player.maxExp = (player.maxExp * 1.5f).toInt()
+                player.skillPoints += 5
+                println("🎉 УРОВЕНЬ ${player.level} восстановлен при загрузке!")
+            }
+
             println("✅ Полный прогресс загружен! Золото: ${player.gold}")
+            println("   HP: ${player.hp}/${player.getMaxHp(inventory)}")
+            println("   Скорость: ${player.speed}")
             return true
 
         } catch (e: Exception) {
