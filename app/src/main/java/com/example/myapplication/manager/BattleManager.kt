@@ -62,11 +62,7 @@ class BattleManager {
                     isProcessing = true
                     turnTimer = 0
 
-                    if (currentMob?.type == 0) {
-                        BattleRenderer.triggerFluffyAttack()
-                    } else {
-                        BattleRenderer.triggerMobAttack(currentMob?.type ?: -1)
-                    }
+                    BattleRenderer.triggerMobAttack(currentMob?.type ?: -1)
 
                     mainHandler.postDelayed({
                         executeMobAttack()

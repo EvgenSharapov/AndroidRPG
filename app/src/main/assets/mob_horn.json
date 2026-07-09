@@ -1,0 +1,48 @@
+{
+  "meta": {
+    "image": "mob_horn",
+    "size": {
+      "w": 688,
+      "h": 354
+    }
+  },
+  "frames": {
+    "idle_0": {
+      "frame": { "x": 9, "y": 13, "h": 52, "w": 67 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "idle_1": {
+      "frame": { "x": 98, "y": 17, "w": 67, "h": 52 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "idle_2": {
+      "frame": { "x": 191, "y": 17, "w": 67, "h": 52 },
+      "rotated": false,
+      "trimmed": false
+    },
+
+
+    "attack_0": {
+      "frame": { "x": 6, "y": 179, "w": 66, "h": 51 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "attack_1": {
+      "frame": { "x": 86, "y": 179, "w": 66, "h": 51 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "attack_2": {
+      "frame": { "x": 172, "y": 179, "w": 66, "h": 51 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "attack_3": {
+      "frame": { "x": 259, "y": 179, "w": 66, "h": 51 },
+      "rotated": false,
+      "trimmed": false
+    }
+  }
+}

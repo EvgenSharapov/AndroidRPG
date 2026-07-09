@@ -9,9 +9,9 @@ object MobRendererFactory {
     private val defaultRenderer = DefaultMobRenderer()
 
     init {
-        register(0, FluffyRenderer())
-        register(1, SpiderRenderer())
-        register(2, ManyEyesRenderer())
+        register(0, AndreRenderer())
+        register(1, HornRenderer())
+        register(2, WolfRenderer())
         register(3, RedKnightRenderer())
         register(4, SlimeGreenRenderer())
         register(5, SteelKnightRenderer())

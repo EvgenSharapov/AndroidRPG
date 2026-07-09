@@ -1,13 +1,12 @@
 package com.example.myapplication.renderer.mobs
 
-import android.graphics.Canvas
 import android.graphics.Color
 import com.example.myapplication.model.MobAction
 import com.example.myapplication.renderer.BaseMobRenderer
 
-class FluffyRenderer : BaseMobRenderer(
-    spriteName = "fluffy",
-    fallbackColor = Color.rgb(255, 200, 200),
+class AndreRenderer : BaseMobRenderer(
+    spriteName = "mob_andre",
+    fallbackColor = Color.rgb(100, 150, 200),
     size = 25f
 ) {
     override fun getAnimationName(action: MobAction): String = when (action) {
@@ -17,6 +16,8 @@ class FluffyRenderer : BaseMobRenderer(
         else -> "idle"
     }
 
-    override fun getBattleScale(): Float = 3.0f
+    override fun getBattleScale(): Float = 2.8f
     override fun getMapSize(): Float = 100f
+
+    fun getBattleAnimationName(): String = "attack"
 }

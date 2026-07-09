@@ -1,0 +1,89 @@
+{
+  "meta": {
+    "image": "mob_andre",
+    "size": {
+      "w": 450,
+      "h": 380
+    }
+  },
+  "frames": {
+    "idle_0": {
+      "frame": { "x": 0, "y": 0, "w": 65, "h": 50 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "idle_1": {
+      "frame": { "x": 69, "y": 0, "w": 65, "h": 50 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "idle_2": {
+      "frame": { "x": 133, "y": 0, "w": 65, "h": 50 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "idle_3": {
+      "frame": { "x": 202, "y": 0, "w": 65, "h": 50 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "idle_4": {
+      "frame": { "x": 265, "y": 0, "w": 65, "h": 50 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "idle_5": {
+      "frame": { "x": 328, "y": 0, "w": 65, "h": 50 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "idle_6": {
+      "frame": { "x": 265, "y": 0, "w": 65, "h": 50 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "idle_7": {
+      "frame": { "x": 202, "y": 0, "w": 65, "h": 50 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "idle_8": {
+      "frame": { "x": 133, "y": 0, "w": 65, "h": 50 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "idle_9": {
+      "frame": { "x": 69, "y": 0, "w": 65, "h": 50 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "idle_10": {
+      "frame": { "x": 0, "y": 0, "w": 65, "h": 50 },
+      "rotated": false,
+      "trimmed": false
+    },
+
+
+
+    "attack_0": {
+      "frame": { "x": 0, "y": 250, "w": 58, "h": 65 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "attack_1": {
+      "frame": { "x": 58, "y": 250, "w": 58, "h": 65 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "attack_2": {
+      "frame": { "x": 116, "y": 250, "w": 58, "h": 65 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "attack_3": {
+      "frame": { "x": 174, "y": 250, "w": 58, "h": 65 },
+      "rotated": false,
+      "trimmed": false
+    }
+  }
+}

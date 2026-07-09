@@ -426,7 +426,8 @@ class StatsScreen {
         player: Player,
         onUpgrade: (Player.StatType) -> Unit,
         onClose: () -> Unit,
-        onResetStats: () -> Unit
+        onResetStats: () -> Unit,
+        onFullReset: () -> Unit
     ): Boolean {
         // ⭐ ЕСЛИ ОТКРЫТО ОКНО ПОДТВЕРЖДЕНИЯ — ОБРАБАТЫВАЕМ ЕГО
         if (showResetConfirm) {
@@ -467,13 +468,15 @@ class StatsScreen {
         }
 
         // ⭐ КНОПКА СБРОСА (внизу экрана)
-        val resetY = STATS_START_Y + STATS_COUNT * STAT_ITEM_HEIGHT + 30f
+        val resetY = STATS_START_Y + STATS_COUNT * STAT_ITEM_HEIGHT + 150f
+        val btnWidth = 400f
+        val btnHeight = 55f
+        val btnX = (width - btnWidth) / 2
+        val btnY = resetY
 
-        if (x > width / 2 - RESET_BTN_WIDTH / 2 && x < width / 2 + RESET_BTN_WIDTH / 2 &&
-            y > resetY + 5f && y < resetY + 5f + RESET_BTN_HEIGHT) {
-            if (player.gold >= 1000) {
-                showResetConfirm = true  // ← показываем окно подтверждения
-            }
+        if (x > btnX && x < btnX + btnWidth &&
+            y > btnY && y < btnY + btnHeight) {
+            onFullReset()  // ← вызываем полный сброс
             return true
         }
 
@@ -640,6 +643,48 @@ class StatsScreen {
         }
 
         return currentY
+    }
+
+    private fun drawResetFullButton(
+        canvas: Canvas,
+        width: Float,
+        height: Float,
+        startY: Float
+    ) {
+        val btnWidth = 400f
+        val btnHeight = 55f
+        val btnX = (width - btnWidth) / 2
+        val btnY = startY + 20f
+
+        // Фон кнопки (красный)
+        val btnPaint = Paint().apply {
+            color = Color.rgb(200, 50, 50)
+            style = Paint.Style.FILL
+        }
+        canvas.drawRoundRect(
+            RectF(btnX, btnY, btnX + btnWidth, btnY + btnHeight),
+            15f, 15f, btnPaint
+        )
+
+        // Свечение
+        val glowPaint = Paint().apply {
+            shader = RadialGradient(
+                width / 2, btnY + btnHeight / 2, 200f,
+                Color.argb(60, 255, 100, 100),
+                Color.TRANSPARENT,
+                Shader.TileMode.CLAMP
+            )
+        }
+        canvas.drawCircle(width / 2, btnY + btnHeight / 2, 200f, glowPaint)
+
+        // Текст
+        val textPaint = Paint().apply {
+            color = Color.WHITE
+            textSize = 26f
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+        }
+        canvas.drawText("🗑️ ПОЛНЫЙ СБРОС ПЕРСОНАЖА", width / 2, btnY + btnHeight / 2 + 9f, textPaint)
     }
 
 }

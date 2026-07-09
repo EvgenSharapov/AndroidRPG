@@ -56,11 +56,9 @@ class SpriteManager(private val context: Context) {
         loadSpriteSheet("battle_idle", "character_battle_idle.json")
         loadSpriteSheet("battle_attack", "character_battle_attack.json")
 
-        loadSpriteSheet("fluffy", "fluffy.json")
-        loadSpriteSheet("spider", "spider.json")
-        loadSpriteSheet("spider_battle", "spider_battle.json")
-        loadSpriteSheet("manyeyes", "manyeyes.json")
-        loadSpriteSheet("manyeyes_battle", "manyeyes_battle.json")
+        loadSpriteSheet("mob_andre", "mob_andre.json")
+        loadSpriteSheet("mob_horn", "mob_horn.json")
+        loadSpriteSheet("mob_wolf", "mob_wolf.json")
 
         loadSpriteSheet("red_knight", "red_knight.json")
         loadSpriteSheet("red_knight_battle", "red_knight.json")
@@ -135,25 +133,26 @@ class SpriteManager(private val context: Context) {
                 "battle_attack" -> {
                     animMap["attack"] = Animation(allFrames, 2)
                 }
-                "fluffy" -> {
-                    animMap["idle"] = Animation(allFrames, 10)
-                    animMap["run"] = Animation(allFrames, 8)
+                "mob_andre" -> {
+                    val idleFrames = allFrames.filter { it.startsWith("idle_") }
+                    val attackFrames = allFrames.filter { it.startsWith("attack_") }
+
+                    animMap["idle"] = Animation(idleFrames, 10)
+                    animMap["attack"] = Animation(attackFrames, 6)
                 }
-                "spider" -> {
-                    animMap["idle"] = Animation(allFrames, 10)
-                    animMap["run"] = Animation(allFrames, 8)
+                "mob_horn" -> {
+                    val idleFrames = allFrames.filter { it.startsWith("idle_") }
+                    val attackFrames = allFrames.filter { it.startsWith("attack_") }
+
+                    animMap["idle"] = Animation(idleFrames, 10)
+                    animMap["attack"] = Animation(attackFrames, 6)
                 }
-                "spider_battle" -> {
-                    animMap["idle"] = Animation(allFrames, 10)
-                    animMap["attack"] = Animation(allFrames, 6)
-                }
-                "manyeyes" -> {
-                    animMap["idle"] = Animation(allFrames, 10)
-                    animMap["run"] = Animation(allFrames, 8)
-                }
-                "manyeyes_battle" -> {
-                    animMap["idle"] = Animation(allFrames, 10)
-                    animMap["attack"] = Animation(allFrames, 6)
+                "mob_wolf" -> {
+                    val idleFrames = allFrames.filter { it.startsWith("idle_") }
+                    val attackFrames = allFrames.filter { it.startsWith("attack_") }
+
+                    animMap["idle"] = Animation(idleFrames, 10)
+                    animMap["attack"] = Animation(attackFrames, 20)
                 }
                 "red_knight" -> {
                     animMap["idle"] = Animation(allFrames, 10)

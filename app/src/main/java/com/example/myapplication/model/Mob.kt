@@ -18,9 +18,9 @@ data class Mob(
     var defense: Int = 0      // ← ДОБАВЛЯЕМ БАЗОВУЮ ЗАЩИТУ
 ) {
     fun getTypeName(): String = when (type) {
-        0 -> if (isBoss) "👑 Флаффи-босс" else "Флаффи"
-        1 -> if (isBoss) "👑 Паук-босс" else "Паук"
-        2 -> if (isBoss) "👑 Многоглаз-босс" else "Многоглаз"
+        0 -> if (isBoss) "👑 Андре-босс" else "Андре"
+        1 -> if (isBoss) "👑 Рогач-босс" else "Рогач"
+        2 -> if (isBoss) "👑 Волк-босс" else "Волк"
         3 -> if (isBoss) "👑 Красный рыцарь" else "Красный рыцарь"
         4 -> if (isBoss) "👑 Зелёный слизень" else "Зелёный слизень"
         5 -> if (isBoss) "👑 Стальной рыцарь" else "Стальной рыцарь"

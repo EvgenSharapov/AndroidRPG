@@ -1,0 +1,48 @@
+{
+  "meta": {
+    "image": "mob_boa",
+    "size": {
+      "w": 839,
+      "h": 409
+    }
+  },
+  "frames": {
+    "idle_0": {
+      "frame": { "x": 4, "y": 8, "h": 74, "w": 70 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "idle_1": {
+      "frame": { "x": 99, "y": 11, "w": 74, "h": 70 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "idle_2": {
+      "frame": { "x": 199, "y": 11, "w": 74, "h": 70 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "idle_3": {
+      "frame": { "x": 292, "y": 11, "w": 74, "h": 70 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "idle_4": {
+      "frame": { "x": 399, "y": 11, "w": 67, "h": 70 },
+      "rotated": false,
+      "trimmed": false
+    },
+
+
+    "attack_0": {
+      "frame": { "x": 0, "y": 230, "w": 84, "h": 70 },
+      "rotated": false,
+      "trimmed": false
+    },
+    "attack_3": {
+      "frame": { "x": 260, "y": 230, "w": 115, "h": 70 },
+      "rotated": false,
+      "trimmed": false
+    }
+  }
+}
